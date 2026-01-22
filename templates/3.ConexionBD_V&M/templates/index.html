@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Conexión BD Vehículo_Matrícula</title>
+
+    <!-- Bootstrap -->
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    <!-- ===============================
+         🔴 ESTILOS FORZADOS PARA TABLAS
+         =============================== -->
+    <style>
+        /* Fondo general */
+        body {
+            background-color: #f2f2f2;
+        }
+
+        /* CONTENEDOR */
+        .contenedor {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        /* 🔥 FORZAR TABLAS (SOLUCIÓN REAL) */
+        table {
+            border-collapse: collapse !important;
+            margin: auto !important;
+        }
+
+        table th,
+        table td {
+            border: 1px solid black !important;
+            padding: 6px !important;
+            text-align: center !important;
+        }
+
+        table th {
+            background-color: #e9e9e9;
+            font-weight: bold;
+        }
+        /* Navbar más formal */
+        .navbar {
+            border-bottom: 1px solid rgba(255,255,255,0.15);
+        }
+
+        .navbar-brand {
+            font-size: 1.1rem;
+            letter-spacing: 0.5px;
+        }
+
+        .navbar .btn {
+            font-weight: 500;
+        }
+
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm px-4">
+    <div class="container-fluid">
+        <span class="navbar-brand fw-semibold">
+            Sistema de Matriculación
+        </span>
+
+        <div class="ms-auto d-flex gap-2">
+            <a href="/vehiculo" class="btn btn-sm btn-outline-light px-3">
+                Vehículo
+            </a>
+            <a href="/matricula" class="btn btn-sm btn-outline-light px-3">
+                Matrícula
+            </a>
+        </div>
+    </div>
+</nav>
+
+
+<div class="container mt-4">
+    <div class="contenedor">
+        {{ contenido | safe }}
+    </div>
+</div>
+
+</body>
+</html>
