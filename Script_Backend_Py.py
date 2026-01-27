@@ -136,6 +136,9 @@ def ejecutar_flask_hijo(ruta_archivo, metodo='GET', datos=None):
     # Prefijo externo que usa el lanzador: /<carpeta>/<archivo_py>
     prefijo_externo = f"/{nombre_carpeta_hijo}/{nombre_archivo_py}"
 
+    app_hija.config["BASE_PATH"] = prefijo_externo  # 👈 AÑADIR ESTO
+
+
     try:
         # 1) Cargar módulo python (app.py del proyecto hijo)
         nombre_modulo = f"{nombre_carpeta_hijo}_{nombre_archivo_py}".replace(".py", "")
