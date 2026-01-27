@@ -41,6 +41,178 @@ def servir_sonidos(filename):
 # EJECUTAR APP HIJA
 # =========================
 def ejecutar_flask_hijo(ruta_archivo, metodo='GET', datos=None):
+    import os
+    import sys
+    import importlib.util
+    from flask import request
+
+    ruta_proyecto_hijo = os.path.dirname(ruta_archivo)          # .../templates/vehiculo_PARTE1
+    nombre_archivo_py = os.path.basename(ruta_archivo)          # app.py
+    nombre_carpeta_hijo = os.path.basename(ruta_proyecto_hijo)  # vehiculo_PARTE1
+
+    prefijo_externo = f"/{nombre_carpeta_hijo}/{nombre_archivo_py}"
+
+    try:
+        # 1) Cargar módulo (app.py del hijo)
+        nombre_modulo = f"{nombre_carpeta_hijo}_{nombre_archivo_py}".replace(".py", "")
+        spec = importlib.util.spec_from_file_location(nombre_modulo, ruta_archivo)
+        modulo = importlib.util.module_from_spec(spec)
+
+        # 2) Para que funcionen imports del hijo (vehiculo.py, etc.)
+        if ruta_proyecto_hijo not in sys.path:
+            sys.path.insert(0, ruta_proyecto_hijo)
+
+        spec.loader.exec_module(modulo)
+
+        if not hasattr(modulo, "app"):
+            return b"<h1>Error</h1><p>El script no contiene una variable 'app' de Flask.</p>", 500
+
+        app_hija = modulo.app
+
+        # 3) Subruta interna (lo que viene después de /carpeta/app.py)
+        path_externo = request.path  # ej: /vehiculo_PARTE1/app.py  ó /vehiculo_PARTE1/app.py/otra
+        if path_externo.startswith(prefijo_externo):
+            subruta = path_externo[len(prefijo_externo):]
+        else:
+            subruta = ""
+
+        if not subruta:
+            subruta = "/"
+        if not subruta.startswith("/"):
+            subruta = "/" + subruta
+
+        # 4) ✅ QUERYSTRING CORRECTO (DICT, NO BYTES)
+        qs_dict = request.args.to_dict(flat=True)  # {"d":"C/1", ...}
+
+        # 5) Ejecutar en el test_client del hijo
+        with app_hija.test_client() as cliente:
+            if metodo.upper() == "POST":
+                data = {}
+                if datos:
+                    data.update(datos)
+
+                # reenviar archivos
+                for key, f in request.files.items():
+                    if f and f.filename:
+                        try:
+                            f.stream.seek(0)
+                        except Exception:
+                            pass
+                        data[key] = (f.stream, f.filename)
+
+                respuesta = cliente.post(
+                    subruta,
+                    query_string=qs_dict,             # ✅ dict
+                    data=data,
+                    content_type="multipart/form-data"
+                )
+            else:
+                respuesta = cliente.get(
+                    subruta,
+                    query_string=qs_dict              # ✅ dict
+                )
+
+            return respuesta.data, respuesta.status_code
+
+    except Exception as e:
+        return f"<h1>Error al ejecutar el script</h1><pre>{e}</pre>".encode("utf-8"), 500
+
+    finally:
+        if ruta_proyecto_hijo in sys.path:
+            sys.path.remove(ruta_proyecto_hijo)
+
+    """
+    Ejecuta una app Flask "hija" (ej. templates/POST/app.py) dentro del lanzador,
+    reenviando:
+      - subruta (path interno)
+      - querystring (?d=C/1)
+      - POST form data
+      - archivos (multipart)
+    """
+    ruta_proyecto_hijo = os.path.dirname(ruta_archivo)          # .../templates/POST
+    nombre_archivo_py = os.path.basename(ruta_archivo)          # app.py
+    nombre_carpeta_hijo = os.path.basename(ruta_proyecto_hijo)  # POST
+
+    # Prefijo externo que usa el lanzador: /<carpeta>/<archivo_py>
+    prefijo_externo = f"/{nombre_carpeta_hijo}/{nombre_archivo_py}"
+
+    try:
+        # 1) Cargar módulo python (app.py del proyecto hijo)
+        nombre_modulo = f"{nombre_carpeta_hijo}_{nombre_archivo_py}".replace(".py", "")
+        spec = importlib.util.spec_from_file_location(nombre_modulo, ruta_archivo)
+        modulo = importlib.util.module_from_spec(spec)
+
+        # 2) Agregar path del proyecto hijo para que import vehiculo, etc funcione
+        if ruta_proyecto_hijo not in sys.path:
+            sys.path.insert(0, ruta_proyecto_hijo)
+
+        spec.loader.exec_module(modulo)
+
+        if not hasattr(modulo, "app"):
+            return b"<h1>Error</h1><p>El script no contiene una variable 'app' de Flask.</p>", 500
+
+        app_hija = modulo.app
+
+        # 3) Calcular subruta interna real (lo que va después del prefijo externo)
+        # Ejemplo:
+        # request.path = /POST/app.py/something
+        # subruta = /something
+        path_externo = request.path
+
+        if path_externo.startswith(prefijo_externo):
+            subruta = path_externo[len(prefijo_externo):]
+        else:
+            # fallback: si por alguna razón no coincide, manda a /
+            subruta = ""
+
+        if not subruta:
+            subruta = "/"
+        if not subruta.startswith("/"):
+            subruta = "/" + subruta
+
+        # 4) Querystring (IMPORTANTÍSIMO para ?d=C/1)
+        qs = request.query_string  # bytes
+
+        # 5) Ejecutar request dentro del test_client del hijo
+        with app_hija.test_client() as cliente:
+            if metodo.upper() == "POST":
+                data = {}
+
+                # form fields
+                if datos:
+                    data.update(datos)
+
+                # archivos (multipart)
+                for key, f in request.files.items():
+                    if f and f.filename:
+                        try:
+                            f.stream.seek(0)
+                        except Exception:
+                            pass
+                        data[key] = (f.stream, f.filename)
+
+                respuesta = cliente.post(
+                    subruta,
+                    query_string=qs,
+                    data=data,
+                    content_type="multipart/form-data"
+                )
+            else:
+                respuesta = cliente.get(
+                    subruta,
+                    query_string=qs
+                )
+
+            return respuesta.data, respuesta.status_code
+
+    except Exception as e:
+        return f"<h1>Error al ejecutar el script</h1><pre>{e}</pre>".encode("utf-8"), 500
+
+    finally:
+        # 6) Limpiar sys.path siempre
+        if ruta_proyecto_hijo in sys.path:
+            sys.path.remove(ruta_proyecto_hijo)
+
     try:
         nombre_modulo = os.path.basename(ruta_archivo).replace('.py', '')
         
