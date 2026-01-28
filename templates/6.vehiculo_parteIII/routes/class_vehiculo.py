@@ -1,6 +1,7 @@
 # routes/class_vehiculo.py
 # CLON FUNCIONAL DEL class.vehiculo.php
 # CRUD COMPLETO + BD REAL + FK CONTROLADA
+# (MISMA LÓGICA, SOLO MEJOR DISEÑO CON BOOTSTRAP)
 
 import base64
 from datetime import datetime
@@ -17,6 +18,38 @@ class Vehiculo:
         print("EJECUTANDOSE EL CONSTRUCTOR VEHICULO<br><br>")
 
     # =====================================================
+    # BOOTSTRAP BASE
+    # =====================================================
+    def _bootstrap_head(self, title="CRUD Vehículo"):
+        return f"""
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>{title}</title>
+
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+            <style>
+                body {{ background:#f4f6f9; }}
+                .card {{ border-radius:14px; }}
+                .table thead th {{ vertical-align: middle; }}
+                .btn {{ border-radius:10px; }}
+                .badge-money {{ font-size: .95rem; }}
+            </style>
+        </head>
+        <body>
+        """
+
+    def _bootstrap_footer(self):
+        return """
+        </body>
+        </html>
+        """
+
+    # =====================================================
     # BASE64 PARA ?d=
     # =====================================================
     def _b64(self, txt):
@@ -25,7 +58,7 @@ class Vehiculo:
         )
 
     # =====================================================
-    # FORMULARIO (NEW / UPDATE)
+    # FORMULARIO (NEW / UPDATE)  ✅ FUNCIONAL CON app.py
     # =====================================================
     def get_form(self, id=None):
 
@@ -37,8 +70,10 @@ class Vehiculo:
                 "avaluo": ""
             }
             op = "new"
-            flag = ""
-
+            titulo = "Nuevo Vehículo"
+            # en NEW permitimos subir foto y escribir avaluo
+            flag_file = ""
+            flag_avaluo = ""
         else:
             cur = self.con.cursor(dictionary=True)
             cur.execute("SELECT * FROM vehiculo WHERE id=%s", (id,))
@@ -54,64 +89,111 @@ class Vehiculo:
             print("</pre>")
 
             op = "update"
-            flag = "enabled"
+            titulo = "Actualizar Vehículo"
+            # En UPDATE normalmente dejas avaluo editable (si tú quieres bloquearlo, pon disabled)
+            flag_file = ""      # permitir cambiar foto
+            flag_avaluo = ""    # permitir cambiar avaluo
 
         combustibles = ["Gasolina", "Diesel", "Eléctrico"]
 
-        return f"""
-        <form method="POST" action="?" enctype="multipart/form-data">
-            <input type="hidden" name="id" value="{id or 0}">
-            <input type="hidden" name="op" value="{op}">
-            <input type="hidden" name="foto_actual" value="{row['foto']}">
+        html = f"""
+        <div class="container py-4">
+            <div class="card shadow-lg">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="mb-0"><i class="bi bi-car-front-fill"></i> {titulo}</h4>
+                        <small class="opacity-75">Formulario de registro</small>
+                    </div>
+                    <a href="?" class="btn btn-light fw-semibold">
+                        <i class="bi bi-arrow-left"></i> Regresar
+                    </a>
+                </div>
 
-            <table border="2" align="center">
-                <tr><th colspan="2">DATOS VEHÍCULO</th></tr>
+                <div class="card-body">
+                    <form method="POST" action="?" enctype="multipart/form-data">
 
-                <tr><td>Placa:</td>
-                    <td><input type="text" name="placa" value="{row['placa']}"></td></tr>
+                        <input type="hidden" name="id" value="{id or 0}">
+                        <input type="hidden" name="op" value="{op}">
+                        <input type="hidden" name="foto_actual" value="{row['foto']}">
 
-                <tr><td>Marca:</td>
-                    <td>{self._get_combo_db("marca","id","descripcion","marca",row["marca"])}</td></tr>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Placa</label>
+                                <input type="text" class="form-control" name="placa" value="{row['placa']}" required>
+                            </div>
 
-                <tr><td>Motor:</td>
-                    <td><input type="text" name="motor" value="{row['motor']}"></td></tr>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Marca</label>
+                                {self._get_combo_db_bs("marca","id","descripcion","marca",row["marca"])}
+                            </div>
 
-                <tr><td>Chasis:</td>
-                    <td><input type="text" name="chasis" value="{row['chasis']}"></td></tr>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Color</label>
+                                {self._get_combo_db_bs("color","id","descripcion","color",row["color"])}
+                            </div>
 
-                <tr><td>Combustible:</td>
-                    <td>{self._get_radio(combustibles,"combustible",row["combustible"])}</td></tr>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Motor</label>
+                                <input type="text" class="form-control" name="motor" value="{row['motor']}">
+                            </div>
 
-                <tr><td>Año:</td>
-                    <td>{self._get_combo_anio("anio",1950,row["anio"])}</td></tr>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Chasis</label>
+                                <input type="text" class="form-control" name="chasis" value="{row['chasis']}">
+                            </div>
 
-                <tr><td>Color:</td>
-                    <td>{self._get_combo_db("color","id","descripcion","color",row["color"])}</td></tr>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold d-block">Combustible</label>
+                                {self._get_radio_bs(combustibles,"combustible",row["combustible"])}
+                            </div>
 
-                <tr><td>Foto:</td>
-                    <td><input type="file" name="foto" {flag}></td></tr>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Año</label>
+                                {self._get_combo_anio_bs("anio",1950,row["anio"])}
+                            </div>
 
-                <tr><td>Avalúo:</td>
-                    <td><input type="text" name="avaluo" value="{row['avaluo']}" {flag}></td></tr>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Foto</label>
+                                <input type="file" class="form-control" name="foto" {flag_file}>
+                                <div class="form-text">
+                                    Actual: <span class="text-muted">{row['foto'] or "Sin foto"}</span>
+                                </div>
+                            </div>
 
-                <tr><th colspan="2">
-                    <input type="submit" name="Guardar" value="GUARDAR">
-                </th></tr>
-            </table>
-        </form>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Avalúo</label>
+                                <input type="text" class="form-control" name="avaluo" value="{row['avaluo']}" {flag_avaluo} required>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 text-end">
+                            <!-- ✅ CLAVE: name="Guardar" para que tu app.py detecte POST -->
+                            <input type="submit" class="btn btn-success px-4"
+                                   name="Guardar" value="GUARDAR">
+                            <a href="?" class="btn btn-secondary ms-2">Cancelar</a>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
         """
 
+        return self._bootstrap_head("Formulario Vehículo") + html + self._bootstrap_footer()
+
     # =====================================================
-    # GUARDAR (INSERT / UPDATE)
+    # GUARDAR (INSERT / UPDATE) ✅ BD REAL
     # =====================================================
     def save_vehiculo(self, data, files):
 
         cur = self.con.cursor()
         foto_nombre = data.get("foto_actual", "")
 
+        # subir foto si llega
         if files and "foto" in files and files["foto"].filename:
             foto = files["foto"]
             foto_nombre = foto.filename
+            # guarda en carpeta images del proyecto
             foto.save(f"images/{foto_nombre}")
 
         if data["op"] == "new":
@@ -144,22 +226,40 @@ class Vehiculo:
             self.con.commit()
             return self._message_ok("actualizó")
 
+        return self._message_error("guardar")
+
     # =====================================================
-    # LISTA
+    # LISTA (BOOTSTRAP BONITO) ✅ MISMA LÓGICA
     # =====================================================
     def get_list(self):
 
         html = f"""
-        <table border="1" align="center">
-            <tr><th colspan="8">Lista de Vehículos</th></tr>
-            <tr><th colspan="8">
-                <a href="?d={self._b64('new/0')}">Nuevo</a>
-            </th></tr>
-            <tr>
-                <th>Placa</th><th>Marca</th><th>Color</th>
-                <th>Año</th><th>Avalúo</th>
-                <th colspan="3">Acciones</th>
-            </tr>
+        <div class="container py-4">
+            <div class="card shadow-lg">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="mb-0"><i class="bi bi-car-front-fill"></i> Lista de Vehículos</h4>
+                        <small class="opacity-75">Gestión de registros</small>
+                    </div>
+                    <a href="?d={self._b64('new/0')}" class="btn btn-light fw-semibold">
+                        <i class="bi bi-plus-circle"></i> Nuevo
+                    </a>
+                </div>
+
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover mb-0 align-middle text-center">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Placa</th>
+                                    <th>Marca</th>
+                                    <th>Color</th>
+                                    <th>Año</th>
+                                    <th>Avalúo</th>
+                                    <th style="width:220px">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
         """
 
         cur = self.con.cursor(dictionary=True)
@@ -175,22 +275,45 @@ class Vehiculo:
         for r in cur.fetchall():
             html += f"""
             <tr>
-                <td>{r['placa']}</td>
+                <td class="fw-semibold">{r['placa']}</td>
                 <td>{r['marca']}</td>
                 <td>{r['color']}</td>
                 <td>{r['anio']}</td>
-                <td>{r['avaluo']}</td>
-                <td><a href="?d={self._b64(f'del/{r["id"]}')}">Borrar</a></td>
-                <td><a href="?d={self._b64(f'act/{r["id"]}')}">Actualizar</a></td>
-                <td><a href="?d={self._b64(f'det/{r["id"]}')}">Detalle</a></td>
+                <td><span class="badge bg-success badge-money">${r['avaluo']}</span></td>
+                <td>
+                    <a class="btn btn-outline-info btn-sm me-1"
+                       href="?d={self._b64(f'det/{r["id"]}')}">
+                       <i class="bi bi-eye"></i> Detalle
+                    </a>
+                    <a class="btn btn-outline-warning btn-sm me-1"
+                       href="?d={self._b64(f'act/{r["id"]}')}">
+                       <i class="bi bi-pencil"></i> Editar
+                    </a>
+                    <a class="btn btn-outline-danger btn-sm"
+                       href="?d={self._b64(f'del/{r["id"]}')}">
+                       <i class="bi bi-trash"></i> Borrar
+                    </a>
+                </td>
             </tr>
             """
 
-        html += "</table>"
-        return html
+        html += """
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card-footer text-center text-muted">
+                    CRUD Vehículo – Flask + MySQL
+                </div>
+            </div>
+        </div>
+        """
+
+        return self._bootstrap_head("Lista Vehículos") + html + self._bootstrap_footer()
 
     # =====================================================
-    # DETALLE (CON MATRÍCULA + IMAGEN)
+    # DETALLE (CON MATRÍCULA + IMAGEN) ✅
     # =====================================================
     def get_detail_vehiculo(self, id):
 
@@ -211,34 +334,56 @@ class Vehiculo:
                 f"desplegar el detalle del vehiculo con id= {id}<br>"
             )
 
-        return f"""
-        <table border="1" align="center">
-            <tr><th colspan="2">DATOS DEL VEHÍCULO</th></tr>
+        html = f"""
+        <div class="container py-4">
+            <div class="card shadow-lg">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0"><i class="bi bi-info-circle"></i> Datos del Vehículo</h4>
+                    <a href="?" class="btn btn-light fw-semibold">
+                        <i class="bi bi-arrow-left"></i> Regresar
+                    </a>
+                </div>
 
-            <tr><td>Placa:</td><td>{row['placa']}</td></tr>
-            <tr><td>Marca:</td><td>{row['marca']}</td></tr>
-            <tr><td>Motor:</td><td>{row['motor']}</td></tr>
-            <tr><td>Chasis:</td><td>{row['chasis']}</td></tr>
-            <tr><td>Combustible:</td><td>{row['combustible']}</td></tr>
-            <tr><td>Año:</td><td>{row['anio']}</td></tr>
-            <tr><td>Color:</td><td>{row['color']}</td></tr>
+                <div class="card-body">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-5 text-center">
+                            <img src="images/{row['foto']}" class="img-thumbnail" style="max-width:300px;">
+                        </div>
 
-            <tr><td>Avalúo:</td><th>${row['avaluo']} USD</th></tr>
+                        <div class="col-md-7">
+                            <table class="table table-bordered mb-0">
+                                <tr><th>Placa</th><td>{row['placa']}</td></tr>
+                                <tr><th>Marca</th><td>{row['marca']}</td></tr>
+                                <tr><th>Motor</th><td>{row['motor']}</td></tr>
+                                <tr><th>Chasis</th><td>{row['chasis']}</td></tr>
+                                <tr><th>Combustible</th><td>{row['combustible']}</td></tr>
+                                <tr><th>Año</th><td>{row['anio']}</td></tr>
+                                <tr><th>Color</th><td>{row['color']}</td></tr>
+                                <tr>
+                                    <th>Avalúo</th>
+                                    <td><span class="badge bg-success fs-6">${row['avaluo']} USD</span></td>
+                                </tr>
+                                <tr>
+                                    <th>Valor Matrícula</th>
+                                    <td><span class="badge bg-warning text-dark fs-6">
+                                        ${self._calculo_matricula(row['avaluo'])} USD
+                                    </span></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
 
-            <tr>
-                <td>Valor Matrícula:</td>
-                <th>${self._calculo_matricula(row['avaluo'])} USD</th>
-            </tr>
-
-            <tr>
-                <th colspan="2">
-                    <img src="images/{row['foto']}" width="300px"/>
-                </th>
-            </tr>
-
-            <tr><th colspan="2"><a href="?">Regresar</a></th></tr>
-        </table>
+                <div class="card-footer text-center">
+                    <a href="?" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Regresar
+                    </a>
+                </div>
+            </div>
+        </div>
         """
+
+        return self._bootstrap_head("Detalle Vehículo") + html + self._bootstrap_footer()
 
     # =====================================================
     # BORRAR (RESPETA FK)
@@ -270,8 +415,9 @@ class Vehiculo:
         except:
             return "0.00"
 
-    def _get_combo_db(self, tabla, valor, etiqueta, nombre, defecto):
-        html = f'<select name="{nombre}">'
+    # --- combos bootstrap
+    def _get_combo_db_bs(self, tabla, valor, etiqueta, nombre, defecto):
+        html = f'<select class="form-select" name="{nombre}">'
         cur = self.con.cursor(dictionary=True)
         cur.execute(f"SELECT {valor},{etiqueta} FROM {tabla}")
         for r in cur.fetchall():
@@ -280,43 +426,62 @@ class Vehiculo:
         html += "</select>"
         return html
 
-    def _get_combo_anio(self, nombre, inicio, defecto):
-        html = f'<select name="{nombre}">'
+    def _get_combo_anio_bs(self, nombre, inicio, defecto):
+        html = f'<select class="form-select" name="{nombre}">'
         actual = datetime.now().year
+        try:
+            defecto_int = int(defecto) if defecto not in (None, "") else None
+        except:
+            defecto_int = None
+
         for i in range(inicio, actual + 1):
-            sel = "selected" if i == defecto else ""
+            sel = "selected" if defecto_int == i else ""
             html += f'<option value="{i}" {sel}>{i}</option>'
         html += "</select>"
         return html
 
-    def _get_radio(self, arr, nombre, defecto):
-        html = "<table>"
+    def _get_radio_bs(self, arr, nombre, defecto):
+        html = '<div class="d-flex flex-wrap gap-3">'
         for v in arr:
             chk = "checked" if v == defecto else ""
             html += f"""
-            <tr>
-                <td>{v}</td>
-                <td><input type="radio" name="{nombre}" value="{v}" {chk}></td>
-            </tr>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="{nombre}" value="{v}" {chk} required>
+                <label class="form-check-label">{v}</label>
+            </div>
             """
-        html += "</table>"
+        html += "</div>"
         return html
 
     # =====================================================
     # MENSAJES
     # =====================================================
     def _message_error(self, txt):
-        return f"""
-        <table align="center">
-            <tr><th>Error al {txt}Favor contactar a ....................</th></tr>
-            <tr><th><a href="?">Regresar</a></th></tr>
-        </table>
-        """
+        return self._bootstrap_head("Error") + f"""
+        <div class="container py-4">
+            <div class="alert alert-danger shadow-sm text-center">
+                <h5 class="mb-1">Error</h5>
+                <div>Error al {txt} Favor contactar a ....................</div>
+            </div>
+            <div class="text-center">
+                <a href="?" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Regresar
+                </a>
+            </div>
+        </div>
+        """ + self._bootstrap_footer()
 
     def _message_ok(self, txt):
-        return f"""
-        <table align="center">
-            <tr><th>El registro se {txt} correctamente</th></tr>
-            <tr><th><a href="?">Regresar</a></th></tr>
-        </table>
-        """
+        return self._bootstrap_head("OK") + f"""
+        <div class="container py-4">
+            <div class="alert alert-success shadow-sm text-center">
+                <h5 class="mb-1">Correcto</h5>
+                <div>El registro se {txt} correctamente</div>
+            </div>
+            <div class="text-center">
+                <a href="?" class="btn btn-primary">
+                    <i class="bi bi-list"></i> Regresar a la lista
+                </a>
+            </div>
+        </div>
+        """ + self._bootstrap_footer()
