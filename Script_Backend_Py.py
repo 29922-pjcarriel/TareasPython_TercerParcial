@@ -393,6 +393,27 @@ def servir_static_hijo(carpeta, filename):
 
     return "Archivo estático no encontrado en el proyecto", 404
 
+# =========================
+# SERVIR IMÁGENES DE PROYECTOS HIJOS (DEBE IR ANTES)
+# =========================
+@app.route('/<carpeta>/images/<path:filename>')
+def servir_images_hijo(carpeta, filename):
+
+    ruta1 = os.path.join(ruta_templates, carpeta, 'images')
+    ruta2 = os.path.join(BASE_DIR, carpeta, 'images')
+
+    if os.path.isdir(ruta1):
+        archivo = os.path.join(ruta1, filename)
+        if os.path.exists(archivo):
+            return send_from_directory(ruta1, filename)
+
+    if os.path.isdir(ruta2):
+        archivo = os.path.join(ruta2, filename)
+        if os.path.exists(archivo):
+            return send_from_directory(ruta2, filename)
+
+    return "Imagen no encontrada", 404
+
 
 # =========================
 # MAIN

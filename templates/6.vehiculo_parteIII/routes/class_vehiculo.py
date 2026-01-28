@@ -1,244 +1,217 @@
 # routes/class_vehiculo.py
+# CLON FUNCIONAL DEL class.vehiculo.php
+# CRUD COMPLETO + BD REAL + FK CONTROLADA
 
 import base64
 from datetime import datetime
 from urllib.parse import quote_plus
-from flask import current_app
-
-
-# =========================================================
-# BASE PATH DINÁMICO (CLAVE PARA EL MENÚ)
-# =========================================================
-def base_path():
-    """
-    Si el proyecto corre dentro del menú lanzador,
-    BASE_PATH será algo como: /vehiculo_PARTE_II/app.py
-    Si corre solo, será ""
-    """
-    return current_app.config.get("BASE_PATH", "")
 
 
 class Vehiculo:
 
+    # =====================================================
+    # CONSTRUCTOR
+    # =====================================================
     def __init__(self, cn):
         self.con = cn
         print("EJECUTANDOSE EL CONSTRUCTOR VEHICULO<br><br>")
 
-        # ATRIBUTOS (IGUAL QUE PHP)
-        self.id = None
-        self.placa = None
-        self.marca = None
-        self.motor = None
-        self.chasis = None
-        self.combustible = None
-        self.anio = None
-        self.color = None
-        self.foto = None
-        self.avaluo = None
-
-    # =========================================================
-    # HELPER BASE64 (IGUAL CONCEPTO PHP, PERO SEGURO EN URL)
-    # =========================================================
-    def _b64_url(self, texto):
+    # =====================================================
+    # BASE64 PARA ?d=
+    # =====================================================
+    def _b64(self, txt):
         return quote_plus(
-            base64.b64encode(texto.encode("utf-8")).decode("utf-8")
+            base64.b64encode(txt.encode("utf-8")).decode("utf-8")
         )
 
-    # =========================================================
+    # =====================================================
     # FORMULARIO (NEW / UPDATE)
-    # =========================================================
+    # =====================================================
     def get_form(self, id=None):
 
-        # Código agregado -- //
-        if (id is None) or (id == 0):
-            self.placa = None
-            self.marca = None
-            self.motor = None
-            self.chasis = None
-            self.combustible = None
-            self.anio = None
-            self.color = None
-            self.foto = None
-            self.avaluo = None
-
-            flag = ""
+        if id is None or id == 0:
+            row = {
+                "placa": "", "marca": "", "motor": "",
+                "chasis": "", "combustible": "",
+                "anio": "", "color": "", "foto": "",
+                "avaluo": ""
+            }
             op = "new"
-            bandera = 1
+            flag = ""
 
         else:
-            cursor = self.con.cursor(dictionary=True)
-            sql = f"SELECT * FROM vehiculo WHERE id={id};"
-            cursor.execute(sql)
-            row = cursor.fetchone()
+            cur = self.con.cursor(dictionary=True)
+            cur.execute("SELECT * FROM vehiculo WHERE id=%s", (id,))
+            row = cur.fetchone()
 
-            # VERIFICA SI EXISTE id
-            bandera = 0 if row is None else 1
-
-            if not bandera:
-                mensaje = f"tratar de actualizar el vehiculo con id= {id} <br>"
-                return self._message_error(mensaje)
+            if row is None:
+                return self._message_error(
+                    f"tratar de actualizar el vehiculo con id= {id}<br>"
+                )
 
             print("<br>REGISTRO A MODIFICAR:<br><pre>")
             print(row)
             print("</pre>")
 
-            # ATRIBUTOS DE LA CLASE VEHICULO
-            self.placa = row["placa"]
-            self.marca = row["marca"]
-            self.motor = row["motor"]
-            self.chasis = row["chasis"]
-            self.combustible = row["combustible"]
-            self.anio = row["anio"]
-            self.color = row["color"]
-            self.foto = row["foto"]
-            self.avaluo = row["avaluo"]
-
-            flag = "enabled"
             op = "update"
+            flag = "enabled"
 
-        if bandera:
+        combustibles = ["Gasolina", "Diesel", "Eléctrico"]
 
-            combustibles = ["Gasolina", "Diesel", "Eléctrico"]
+        return f"""
+        <form method="POST" action="?" enctype="multipart/form-data">
+            <input type="hidden" name="id" value="{id or 0}">
+            <input type="hidden" name="op" value="{op}">
+            <input type="hidden" name="foto_actual" value="{row['foto']}">
 
-            html = f"""
-            <form name="Form_vehiculo" method="POST"
-                  action="{base_path()}/"
-                  enctype="multipart/form-data">
+            <table border="2" align="center">
+                <tr><th colspan="2">DATOS VEHÍCULO</th></tr>
 
-                <input type="hidden" name="id" value="{id or 0}">
-                <input type="hidden" name="op" value="{op}">
+                <tr><td>Placa:</td>
+                    <td><input type="text" name="placa" value="{row['placa']}"></td></tr>
 
-                <table border="2" align="center">
-                    <tr>
-                        <th colspan="2">DATOS VEHÍCULO</th>
-                    </tr>
-                    <tr>
-                        <td>Placa:</td>
-                        <td><input type="text" size="6" name="placa" value="{self.placa or ''}"></td>
-                    </tr>
-                    <tr>
-                        <td>Marca:</td>
-                        <td>{self._get_combo_db("marca","id","descripcion","marca",self.marca)}</td>
-                    </tr>
-                    <tr>
-                        <td>Motor:</td>
-                        <td><input type="text" size="15" name="motor" value="{self.motor or ''}"></td>
-                    </tr>
-                    <tr>
-                        <td>Chasis:</td>
-                        <td><input type="text" size="15" name="chasis" value="{self.chasis or ''}"></td>
-                    </tr>
-                    <tr>
-                        <td>Combustible:</td>
-                        <td>{self._get_radio(combustibles, "combustible", self.combustible)}</td>
-                    </tr>
-                    <tr>
-                        <td>Año:</td>
-                        <td>{self._get_combo_anio("anio",1950,self.anio)}</td>
-                    </tr>
-                    <tr>
-                        <td>Color:</td>
-                        <td>{self._get_combo_db("color","id","descripcion","color",self.color)}</td>
-                    </tr>
-                    <tr>
-                        <td>Foto:</td>
-                        <td><input type="file" name="foto" {flag}></td>
-                    </tr>
-                    <tr>
-                        <td>Avalúo:</td>
-                        <td><input type="text" size="8" name="avaluo" value="{self.avaluo or ''}" {flag}></td>
-                    </tr>
-                    <tr>
-                        <th colspan="2"><input type="submit" name="Guardar" value="GUARDAR"></th>
-                    </tr>
-                </table>
-            </form>
-            """
-            return html
+                <tr><td>Marca:</td>
+                    <td>{self._get_combo_db("marca","id","descripcion","marca",row["marca"])}</td></tr>
 
-    # =========================================================
-    # LISTADO
-    # =========================================================
+                <tr><td>Motor:</td>
+                    <td><input type="text" name="motor" value="{row['motor']}"></td></tr>
+
+                <tr><td>Chasis:</td>
+                    <td><input type="text" name="chasis" value="{row['chasis']}"></td></tr>
+
+                <tr><td>Combustible:</td>
+                    <td>{self._get_radio(combustibles,"combustible",row["combustible"])}</td></tr>
+
+                <tr><td>Año:</td>
+                    <td>{self._get_combo_anio("anio",1950,row["anio"])}</td></tr>
+
+                <tr><td>Color:</td>
+                    <td>{self._get_combo_db("color","id","descripcion","color",row["color"])}</td></tr>
+
+                <tr><td>Foto:</td>
+                    <td><input type="file" name="foto" {flag}></td></tr>
+
+                <tr><td>Avalúo:</td>
+                    <td><input type="text" name="avaluo" value="{row['avaluo']}" {flag}></td></tr>
+
+                <tr><th colspan="2">
+                    <input type="submit" name="Guardar" value="GUARDAR">
+                </th></tr>
+            </table>
+        </form>
+        """
+
+    # =====================================================
+    # GUARDAR (INSERT / UPDATE)
+    # =====================================================
+    def save_vehiculo(self, data, files):
+
+        cur = self.con.cursor()
+        foto_nombre = data.get("foto_actual", "")
+
+        if files and "foto" in files and files["foto"].filename:
+            foto = files["foto"]
+            foto_nombre = foto.filename
+            foto.save(f"images/{foto_nombre}")
+
+        if data["op"] == "new":
+            cur.execute("""
+                INSERT INTO vehiculo
+                (placa, marca, motor, chasis, combustible, anio, color, foto, avaluo)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            """, (
+                data["placa"], data["marca"], data["motor"],
+                data["chasis"], data["combustible"],
+                data["anio"], data["color"], foto_nombre,
+                data["avaluo"]
+            ))
+            self.con.commit()
+            return self._message_ok("insertó")
+
+        if data["op"] == "update":
+            cur.execute("""
+                UPDATE vehiculo SET
+                    placa=%s, marca=%s, motor=%s, chasis=%s,
+                    combustible=%s, anio=%s, color=%s,
+                    foto=%s, avaluo=%s
+                WHERE id=%s
+            """, (
+                data["placa"], data["marca"], data["motor"],
+                data["chasis"], data["combustible"],
+                data["anio"], data["color"], foto_nombre,
+                data["avaluo"], data["id"]
+            ))
+            self.con.commit()
+            return self._message_ok("actualizó")
+
+    # =====================================================
+    # LISTA
+    # =====================================================
     def get_list(self):
-
-        d_new = self._b64_url("new/0")
 
         html = f"""
         <table border="1" align="center">
+            <tr><th colspan="8">Lista de Vehículos</th></tr>
+            <tr><th colspan="8">
+                <a href="?d={self._b64('new/0')}">Nuevo</a>
+            </th></tr>
             <tr>
-                <th colspan="8">Lista de Vehículos</th>
-            </tr>
-            <tr>
-                <th colspan="8"><a href="{base_path()}/?d={d_new}">Nuevo</a></th>
-            </tr>
-            <tr>
-                <th>Placa</th>
-                <th>Marca</th>
-                <th>Color</th>
-                <th>Año</th>
-                <th>Avalúo</th>
+                <th>Placa</th><th>Marca</th><th>Color</th>
+                <th>Año</th><th>Avalúo</th>
                 <th colspan="3">Acciones</th>
             </tr>
         """
 
-        sql = """
-        SELECT v.id, v.placa, m.descripcion AS marca,
-               c.descripcion AS color, v.anio, v.avaluo
-        FROM vehiculo v, color c, marca m
-        WHERE v.marca=m.id AND v.color=c.id;
-        """
+        cur = self.con.cursor(dictionary=True)
+        cur.execute("""
+            SELECT v.id, v.placa,
+                   m.descripcion AS marca,
+                   c.descripcion AS color,
+                   v.anio, v.avaluo
+            FROM vehiculo v, marca m, color c
+            WHERE v.marca=m.id AND v.color=c.id
+        """)
 
-        cursor = self.con.cursor(dictionary=True)
-        cursor.execute(sql)
-        rows = cursor.fetchall()
-
-        if len(rows) != 0:
-            for row in rows:
-
-                d_del = self._b64_url(f"del/{row['id']}")
-                d_act = self._b64_url(f"act/{row['id']}")
-                d_det = self._b64_url(f"det/{row['id']}")
-
-                html += f"""
-                <tr>
-                    <td>{row['placa']}</td>
-                    <td>{row['marca']}</td>
-                    <td>{row['color']}</td>
-                    <td>{row['anio']}</td>
-                    <td>{row['avaluo']}</td>
-                    <td><a href="{base_path()}/?d={d_del}">Borrar</a></td>
-                    <td><a href="{base_path()}/?d={d_act}">Actualizar</a></td>
-                    <td><a href="{base_path()}/?d={d_det}">Detalle</a></td>
-                </tr>
-                """
-        else:
-            html += self._message_BD_Vacia("Tabla Vehiculo<br>")
+        for r in cur.fetchall():
+            html += f"""
+            <tr>
+                <td>{r['placa']}</td>
+                <td>{r['marca']}</td>
+                <td>{r['color']}</td>
+                <td>{r['anio']}</td>
+                <td>{r['avaluo']}</td>
+                <td><a href="?d={self._b64(f'del/{r["id"]}')}">Borrar</a></td>
+                <td><a href="?d={self._b64(f'act/{r["id"]}')}">Actualizar</a></td>
+                <td><a href="?d={self._b64(f'det/{r["id"]}')}">Detalle</a></td>
+            </tr>
+            """
 
         html += "</table>"
         return html
 
-    # =========================================================
-    # DETALLE
-    # =========================================================
+    # =====================================================
+    # DETALLE (CON MATRÍCULA + IMAGEN)
+    # =====================================================
     def get_detail_vehiculo(self, id):
 
-        sql = f"""
-        SELECT v.placa, m.descripcion AS marca, v.motor, v.chasis,
-               v.combustible, v.anio, c.descripcion AS color,
-               v.foto, v.avaluo
-        FROM vehiculo v, color c, marca m
-        WHERE v.id={id} AND v.marca=m.id AND v.color=c.id;
-        """
+        cur = self.con.cursor(dictionary=True)
+        cur.execute("""
+            SELECT v.placa, m.descripcion AS marca,
+                   v.motor, v.chasis, v.combustible,
+                   v.anio, c.descripcion AS color,
+                   v.foto, v.avaluo
+            FROM vehiculo v, marca m, color c
+            WHERE v.id=%s AND v.marca=m.id AND v.color=c.id
+        """, (id,))
 
-        cursor = self.con.cursor(dictionary=True)
-        cursor.execute(sql)
-        row = cursor.fetchone()
+        row = cur.fetchone()
 
         if row is None:
-            mensaje = f"desplegar el detalle del vehiculo con id= {id} <br>"
-            return self._message_error(mensaje)
+            return self._message_error(
+                f"desplegar el detalle del vehiculo con id= {id}<br>"
+            )
 
-        html = f"""
+        return f"""
         <table border="1" align="center">
             <tr><th colspan="2">DATOS DEL VEHÍCULO</th></tr>
 
@@ -247,102 +220,103 @@ class Vehiculo:
             <tr><td>Motor:</td><td>{row['motor']}</td></tr>
             <tr><td>Chasis:</td><td>{row['chasis']}</td></tr>
             <tr><td>Combustible:</td><td>{row['combustible']}</td></tr>
-            <tr><td>Anio:</td><td>{row['anio']}</td></tr>
+            <tr><td>Año:</td><td>{row['anio']}</td></tr>
             <tr><td>Color:</td><td>{row['color']}</td></tr>
+
             <tr><td>Avalúo:</td><th>${row['avaluo']} USD</th></tr>
-            <tr><td>Valor Matrícula:</td>
+
+            <tr>
+                <td>Valor Matrícula:</td>
                 <th>${self._calculo_matricula(row['avaluo'])} USD</th>
             </tr>
+
             <tr>
                 <th colspan="2">
-                    <img src="{base_path()}/images/{row['foto']}" width="300px">
+                    <img src="images/{row['foto']}" width="300px"/>
                 </th>
             </tr>
-            <tr>
-                <th colspan="2">
-                    <a href="{base_path()}/">Regresar</a>
-                </th>
-            </tr>
+
+            <tr><th colspan="2"><a href="?">Regresar</a></th></tr>
         </table>
         """
-        return html
 
-    # =========================================================
-    # DELETE (IGUAL QUE TU PHP: SOLO MENSAJE)
-    # =========================================================
+    # =====================================================
+    # BORRAR (RESPETA FK)
+    # =====================================================
     def delete_vehiculo(self, id):
-        mensaje = f"PROXIMAMENTE SE ELIMINARA el vehiculo con id= {id} <br>"
-        return self._message_error(mensaje)
 
-    # =========================================================
-    # MÉTODOS PRIVADOS (IGUAL QUE PHP)
-    # =========================================================
-    def _get_combo_db(self, tabla, valor, etiqueta, nombre, defecto=None):
+        cur = self.con.cursor(dictionary=True)
+
+        # Verificar matrículas asociadas
+        cur.execute("SELECT COUNT(*) AS total FROM matricula WHERE vehiculo=%s", (id,))
+        r = cur.fetchone()
+
+        if r["total"] > 0:
+            return self._message_error(
+                "eliminar el vehículo porque tiene matrículas registradas.<br>"
+            )
+
+        cur.execute("DELETE FROM vehiculo WHERE id=%s", (id,))
+        self.con.commit()
+
+        return self._message_ok("eliminó")
+
+    # =====================================================
+    # UTILIDADES
+    # =====================================================
+    def _calculo_matricula(self, avaluo):
+        try:
+            return f"{float(avaluo) * 0.10:.2f}"
+        except:
+            return "0.00"
+
+    def _get_combo_db(self, tabla, valor, etiqueta, nombre, defecto):
         html = f'<select name="{nombre}">'
-        cursor = self.con.cursor(dictionary=True)
-        cursor.execute(f"SELECT {valor},{etiqueta} FROM {tabla};")
-        rows = cursor.fetchall()
-
-        for row in rows:
-            selected = 'selected' if defecto == row[valor] else ''
-            html += f'<option value="{row[valor]}" {selected}>{row[etiqueta]}</option>\n'
-        html += '</select>'
+        cur = self.con.cursor(dictionary=True)
+        cur.execute(f"SELECT {valor},{etiqueta} FROM {tabla}")
+        for r in cur.fetchall():
+            sel = "selected" if r[valor] == defecto else ""
+            html += f'<option value="{r[valor]}" {sel}>{r[etiqueta]}</option>'
+        html += "</select>"
         return html
 
-    def _get_combo_anio(self, nombre, anio_inicial, defecto=None):
+    def _get_combo_anio(self, nombre, inicio, defecto):
         html = f'<select name="{nombre}">'
-        anio_actual = datetime.now().year
-        for i in range(anio_inicial, anio_actual + 1):
-            selected = 'selected' if defecto == i else ''
-            html += f'<option value="{i}" {selected}>{i}</option>\n'
-        html += '</select>'
+        actual = datetime.now().year
+        for i in range(inicio, actual + 1):
+            sel = "selected" if i == defecto else ""
+            html += f'<option value="{i}" {sel}>{i}</option>'
+        html += "</select>"
         return html
 
-    def _get_radio(self, arreglo, nombre, defecto=None):
-        html = '<table border="0" align="left">'
-        for etiqueta in arreglo:
-            checked = "checked" if defecto == etiqueta else ""
+    def _get_radio(self, arr, nombre, defecto):
+        html = "<table>"
+        for v in arr:
+            chk = "checked" if v == defecto else ""
             html += f"""
             <tr>
-                <td>{etiqueta}</td>
-                <td><input type="radio" value="{etiqueta}" name="{nombre}" {checked}/></td>
+                <td>{v}</td>
+                <td><input type="radio" name="{nombre}" value="{v}" {chk}></td>
             </tr>
             """
-        html += '</table>'
+        html += "</table>"
         return html
 
-    def _calculo_matricula(self, avaluo):
-        return f"{(float(avaluo) * 0.10):.2f}"
-
-    def _message_error(self, tipo):
+    # =====================================================
+    # MENSAJES
+    # =====================================================
+    def _message_error(self, txt):
         return f"""
-        <table border="0" align="center">
-            <tr>
-                <th>Error al {tipo} Favor contactar a .................... </th>
-            </tr>
-            <tr>
-                <th><a href="{base_path()}/">Regresar</a></th>
-            </tr>
+        <table align="center">
+            <tr><th>Error al {txt}Favor contactar a ....................</th></tr>
+            <tr><th><a href="?">Regresar</a></th></tr>
         </table>
         """
 
-    def _message_BD_Vacia(self, tipo):
+    def _message_ok(self, txt):
         return f"""
-        <table border="0" align="center">
-            <tr>
-                <th> NO existen registros en la {tipo} Favor contactar a .................... </th>
-            </tr>
-        </table>
-        """
-
-    def _message_ok(self, tipo):
-        return f"""
-        <table border="0" align="center">
-            <tr>
-                <th>El registro se {tipo} correctamente</th>
-            </tr>
-            <tr>
-                <th><a href="{base_path()}/">Regresar</a></th>
-            </tr>
+        <table align="center">
+            <tr><th>El registro se {txt} correctamente</th></tr>
+            <tr><th><a href="?">Regresar</a></th></tr>
         </table>
         """
