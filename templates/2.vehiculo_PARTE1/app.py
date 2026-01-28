@@ -1,117 +1,131 @@
-# app.py
-import os
-import uuid
-import pymysql
-from flask import Flask, request, redirect, send_from_directory
+from flask import Flask, request
+import constantes
 
-from vehiculo import Vehiculo
+from clases.vehiculo import Vehiculo
 
 app = Flask(__name__)
 
-# ======= carpeta images (como pediste) =======
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-IMAGES_DIR = os.path.join(BASE_DIR, "images")
-os.makedirs(IMAGES_DIR, exist_ok=True)
-
-# ======= conexión igual a tu conectar() =======
+# =========================
+# CONEXIÓN (igual que conectar() en PHP)
+# =========================
 def conectar():
-    return pymysql.connect(
-        host="localhost",
-        user="root",
-        password="123",
-        database="matriculacionfinal",
-        charset="utf8mb4",
-        cursorclass=pymysql.cursors.DictCursor,
-        autocommit=False
-    )
+    try:
+        import mysql.connector
+        return mysql.connector.connect(
+            host=constantes.DB_HOST,
+            user=constantes.DB_USER,
+            password=constantes.DB_PASS,
+            database=constantes.DB_NAME,
+            charset="utf8"
+        )
+    except Exception:
+        import pymysql
+        return pymysql.connect(
+            host=constantes.DB_HOST,
+            user=constantes.DB_USER,
+            password=constantes.DB_PASS,
+            database=constantes.DB_NAME,
+            charset="utf8",
+            cursorclass=pymysql.cursors.DictCursor
+        )
 
-# ======= servir imágenes =======
-@app.get("/images/<path:filename>")
-def images(filename):
-    return send_from_directory(IMAGES_DIR, filename)
+# =========================
+# NAVBAR (SIN MATRÍCULA)
+# =========================
+def navbar():
+    return """
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+      <div class="container">
+        <a class="navbar-brand fw-semibold" href="app.py">Vehículos</a>
+      </div>
+    </nav>
+    """
 
-def page_wrap(inner_html: str) -> str:
-    return f"""<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+# =========================
+# LAYOUT
+# =========================
+def page(title, module_title, body_html, debug_html=""):
+    return f"""<!doctype html>
+<html lang="es">
 <head>
-    <title>Matriculas Vehículos PARTE I</title>
-    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{title}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>
-{inner_html}
+<body class="bg-light">
+
+{navbar()}
+
+<div class="container py-4">
+  <h4 class="mb-3">{module_title}</h4>
+
+  <div class="card shadow-sm">
+    <div class="card-body">
+      {debug_html}
+      {body_html}
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+document.querySelectorAll("table").forEach(t=>{{
+  t.classList.add("table","table-bordered","table-hover","align-middle");
+}});
+document.querySelectorAll('input[type="submit"]').forEach(b=>{{
+  b.classList.add("btn","btn-success");
+}});
+</script>
+
 </body>
 </html>"""
 
+
+def debug_block(data):
+    import html
+    return f"<pre>{html.escape(str(data))}</pre>"
+
+# =========================
+# ÚNICA RUTA (IGUAL QUE TU PHP)
+# =========================
 @app.route("/", methods=["GET", "POST"])
-def index():
-    con = conectar()
-    obj = Vehiculo(con)
+def main():
 
+    cn = conectar()
     try:
-        # ===================== POST (GUARDAR) =====================
-        if request.method == "POST":
-            placa = (request.form.get("placa") or "").strip()
-            marca = (request.form.get("marcaCMB") or "").strip()
-            motor = (request.form.get("motor") or "").strip()
-            chasis = (request.form.get("chasis") or "").strip()
-            combustible = (request.form.get("combustibleRBT") or "").strip()
-            anio = (request.form.get("anio") or "").strip()
-            color = (request.form.get("colorCMB") or "").strip()
-            avaluo = (request.form.get("avaluo") or "").strip()
+        obj = Vehiculo(cn)
 
-            # foto a /images
-            foto_file = request.files.get("foto")
-            filename = ""
-            if foto_file and foto_file.filename:
-                ext = os.path.splitext(foto_file.filename)[1].lower()
-                filename = f"{uuid.uuid4().hex}{ext}"
-                foto_file.save(os.path.join(IMAGES_DIR, filename))
-
-            ok = obj.insertar({
-                "placa": placa,
-                "marca": marca,
-                "motor": motor,
-                "chasis": chasis,
-                "combustible": combustible,
-                "anio": anio,
-                "color": color,
-                "foto": filename,
-                "avaluo": avaluo,
-            })
-
-            con.close()
-            return redirect("/") if ok else page_wrap(obj._message_error("guardar"))
-
-        # ===================== GET (MISMA LÓGICA d=C/1) =====================
-        d = request.args.get("d", "")
-        if d:
+        if "d" in request.args:
+            d = request.args.get("d", "")
             tmp = d.split("/")
             op = tmp[0] if len(tmp) > 0 else ""
             _id = tmp[1] if len(tmp) > 1 else ""
 
+            debug_html = debug_block(dict(request.args))
+
             if op == "C":
-                html = obj.get_form(_id)
-                con.close()
-                return page_wrap(html)
+                body = obj.get_form(_id)
+            else:
+                body = ""
 
-            # (R/U/D quedan como en tu PHP: vacíos o por implementar)
-            # Si quieres, luego los completamos igual que el CRUD vehiculo grande.
-            html = obj._message_error("operación")
-            con.close()
-            return page_wrap(html)
+        else:
+            debug_html = debug_block(dict(request.form))
+            body = obj.get_list()
 
-        # default: listado
-        html = obj.get_list()
-        con.close()
-        return page_wrap(html)
+        return page(
+            title="Vehículos",
+            module_title="Módulo Vehículo",
+            body_html=body,
+            debug_html=debug_html
+        )
 
-    except Exception:
+    finally:
         try:
-            con.close()
+            cn.close()
         except Exception:
             pass
-        return page_wrap("<h3>Error inesperado</h3>")
 
 if __name__ == "__main__":
     app.run(debug=True)
