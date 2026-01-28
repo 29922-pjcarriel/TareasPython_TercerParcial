@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Navbar CRUD</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="static/bootstrap.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <style>
+        body {
+            background-color: #eef1f5;
+        }
+
+        .navbar {
+            border-radius: 0 0 14px 14px;
+        }
+
+        .nav-link.active {
+            font-weight: 600;
+            color: #fff !important;
+            background-color: rgba(255,255,255,0.15);
+            border-radius: 8px;
+        }
+
+        .container-fluid-content {
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ================= NAVBAR ================= -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark px-4">
+
+    <!-- ❗ SIN / -->
+    <a class="navbar-brand fw-bold" href="?mod=vehiculo">
+        <i class="bi bi-layers"></i> Navbar CRUD
+    </a>
+
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCRUD">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarCRUD">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+            <!-- VEHICULO -->
+            <li class="nav-item">
+                <a class="nav-link {% if modulo == 'vehiculo' %}active{% endif %}"
+                   href="?mod=vehiculo">
+                    <i class="bi bi-car-front-fill"></i> Vehículos
+                </a>
+            </li>
+
+            <!-- MATRICULA -->
+            <li class="nav-item ms-2">
+                <a class="nav-link {% if modulo == 'matricula' %}active{% endif %}"
+                   href="?mod=matricula">
+                    <i class="bi bi-journal-check"></i> Matrículas
+                </a>
+            </li>
+
+        </ul>
+
+        <span class="navbar-text text-light opacity-75">
+            Flask + MySQL
+        </span>
+    </div>
+</nav>
+
+<!-- ================= CONTENIDO ================= -->
+<div class="container-fluid container-fluid-content mt-3">
+    {{ contenido | safe }}
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>

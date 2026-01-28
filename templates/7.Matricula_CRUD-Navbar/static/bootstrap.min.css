@@ -1,0 +1,135 @@
+/* ===========================================
+   BOOTSTRAP-LIKE MINIMAL (CRUD VERSION)
+   Compatible con tu proyecto Flask
+   =========================================== */
+
+:root {
+    --bs-primary: #0d6efd;
+    --bs-success: #198754;
+    --bs-danger: #dc3545;
+    --bs-warning: #ffc107;
+    --bs-dark: #212529;
+    --bs-light: #f8f9fa;
+    --bs-body-bg: #eef1f5;
+}
+
+body {
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
+    background-color: var(--bs-body-bg);
+}
+
+/* ===== NAVBAR ===== */
+.navbar {
+    display: flex;
+    align-items: center;
+    padding: .75rem 1.25rem;
+}
+
+.navbar-dark {
+    background-color: var(--bs-dark);
+}
+
+.navbar a {
+    color: #fff;
+    text-decoration: none;
+    margin-right: 1rem;
+}
+
+.navbar .nav-link.active {
+    font-weight: 600;
+    background: rgba(255,255,255,.15);
+    padding: .35rem .75rem;
+    border-radius: 8px;
+}
+
+/* ===== CONTAINER ===== */
+.container,
+.container-fluid {
+    width: 100%;
+    padding: 1rem;
+}
+
+/* ===== CARD ===== */
+.card {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 6px 20px rgba(0,0,0,.08);
+    margin-bottom: 1.5rem;
+}
+
+.card-header {
+    padding: .75rem 1rem;
+    font-weight: 600;
+}
+
+.card-footer {
+    padding: .75rem;
+    text-align: center;
+    background: #f8f9fa;
+}
+
+/* ===== TABLE ===== */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table th,
+.table td {
+    padding: .6rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.table thead {
+    background-color: var(--bs-dark);
+    color: #fff;
+}
+
+/* ===== BUTTONS ===== */
+.btn {
+    display: inline-block;
+    padding: .45rem .9rem;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: .9rem;
+}
+
+.btn-primary { background: var(--bs-primary); color: #fff; }
+.btn-success { background: var(--bs-success); color: #fff; }
+.btn-danger  { background: var(--bs-danger); color: #fff; }
+.btn-warning { background: var(--bs-warning); color: #000; }
+.btn-light   { background: #f8f9fa; color: #000; }
+.btn-secondary { background: #6c757d; color: #fff; }
+
+.btn:hover {
+    opacity: .9;
+}
+
+/* ===== FORM ===== */
+.form-control,
+.form-select {
+    width: 100%;
+    padding: .45rem;
+    border-radius: 8px;
+    border: 1px solid #ced4da;
+}
+
+/* ===== ALERTS ===== */
+.alert {
+    padding: .75rem 1rem;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+}
+
+.alert-success {
+    background: #d1e7dd;
+    color: #0f5132;
+}
+
+.alert-danger {
+    background: #f8d7da;
+    color: #842029;
+}
