@@ -37,7 +37,7 @@ def index():
         titulo = "CRUD Matrículas"
     else:
         contenido = objVehiculo.get_list()
-        titulo = "CRUD Vehículos"
+        titulo = "Conexion Base de Datos"
 
     html = f"""
     <!DOCTYPE html>
