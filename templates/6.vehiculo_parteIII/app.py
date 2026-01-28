@@ -5,7 +5,7 @@ import base64
 import mysql.connector
 
 from routes.constantes import SERVER, USER, PASS, BD
-from routes.class_vehiculo import Vehiculo
+from routes.class_vehiculo6 import Vehiculo
 
 # =====================================================
 # APP

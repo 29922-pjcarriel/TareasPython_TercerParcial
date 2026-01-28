@@ -2,8 +2,8 @@
 from flask import Flask, request
 import mysql.connector
 
-from routes.class_vehiculo import Vehiculo
-from routes.class_matricula import Matricula
+from routes.class_vehiculo1 import Vehiculo
+from routes.class_matricula1 import Matricula
 
 app = Flask(__name__)
 
