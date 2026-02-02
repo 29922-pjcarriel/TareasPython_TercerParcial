@@ -1,0 +1,323 @@
+/* ============================================
+   UNIVERSIDAD DE LAS FUERZAS ARMADAS - ESPE
+   Diseño institucional con Bootstrap 3
+   ============================================ */
+
+/* Fuente moderna */
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
+
+/* ======== General ======== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: auto;
+}
+
+body {
+  width: 100%;
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  text-align: center;
+  background: linear-gradient(135deg, #e8f5e9 0%, #f0fff0 100%);
+  color: #1b1b1b;
+}
+
+/* ======== Tipografía ======== */
+h2 {
+  text-align: center;
+  margin-bottom: 25px;
+  color: #006633;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+p {
+  font-size: 18px;
+  margin: 5px 0;
+  color: #1b1b1b;
+}
+
+/* ======== Botones ======== */
+.Boton {
+  background-color: #006633;
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  padding: 15px 32px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 4px 2px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.Boton:hover {
+  background-color: #009639;
+  box-shadow: 0 6px 14px rgba(0, 150, 57, 0.25);
+  transform: translateY(-2px);
+}
+
+.Boton:active {
+  transform: scale(0.98);
+}
+
+/* ======== Cajas generales ======== */
+.box {
+  border-radius: 10px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 3px solid transparent;
+}
+
+.white {
+  background: #ffffff;
+  border-color: #e8fff3;
+}
+
+.soft-green {
+  background: #eafaf0;
+  border-color: #006633;
+  color: #004d26;
+}
+
+.dark-green {
+  background: #00331a;
+  border-color: #004d26;
+}
+
+.green {
+  background: #009639;
+  border-color: #006633;
+}
+
+.green a {
+  color: white;
+  font-weight: 600;
+  font-size: 18px;
+  text-decoration: none;
+}
+
+.green a:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 6px;
+}
+
+/* ======== HEADER ======== */
+#header {
+  text-align: center;
+  background-color: #ffffff;
+  border-radius: 10px;
+  border: 3px solid #e8fff3;
+  box-shadow: 0 6px 20px rgba(43, 63, 45, 0.2);
+  padding: 20px;
+}
+
+#header img {
+  display: block;
+  margin: 0 auto;
+  height: auto;
+  max-width: 90%;
+}
+
+/* ======== NAVBAR ======== */
+#MenuBar {
+  z-index: 10000;
+  border-radius: 6px;
+  overflow: visible;
+  margin-bottom: 20px;
+}
+
+/* Fondo gris degradado */
+#MenuBar.navbar-inverse {
+  background: linear-gradient(to bottom, #3c3c3c, #1f1f1f);
+  border: 1px solid #111;
+  border-radius: 6px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+}
+
+/* Marca (Grupo 5) */
+#MenuBar .navbar-brand.no-link {
+  color: #dcdcdc !important;
+  font-weight: 700;
+  cursor: default;
+}
+
+/* Enlaces principales */
+#MenuBar .navbar-nav > li > a {
+  color: #e0e0e0 !important;
+  font-weight: 500;
+  font-size: 16px;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+#MenuBar .navbar-nav > li > a:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  transform: translateY(-1px);
+}
+
+/* === Dropdown === */
+#MenuBar .dropdown-menu {
+  background-color: #fff !important;
+  color: #000 !important;
+  border-radius: 6px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
+  z-index: 10001;
+  padding: 0;
+}
+
+#MenuBar .dropdown-menu > li {
+  border-bottom: 1px solid rgba(0, 150, 57, 0.3); /* línea de separación verde suave */
+}
+
+#MenuBar .dropdown-menu > li:last-child {
+  border-bottom: none;
+}
+
+#MenuBar .dropdown-menu > li > a {
+  color: #000 !important;
+  font-weight: 500;
+  padding: 10px 18px;
+  transition: background 0.2s ease;
+}
+
+#MenuBar .dropdown-menu > li > a:hover {
+  background-color: #e8f5e9 !important;
+  color: #006633 !important;
+}
+
+/* Barra de búsqueda */
+#MenuBar .navbar-form {
+  margin-right: 10px;
+}
+
+#MenuBar .navbar-form .form-control {
+  border-radius: 4px;
+  width: 160px;
+  transition: width 0.3s ease;
+}
+
+#MenuBar .navbar-form .form-control:focus {
+  width: 200px;
+}
+
+#MenuBar .navbar-form .btn {
+  border-radius: 4px;
+  font-weight: 600;
+  padding: 6px 12px;
+}
+
+#MenuBar .navbar-form .btn:hover {
+  transform: translateY(-1px);
+}
+
+/* ======== LEFT MENU ======== */
+#leftMenu {
+  background-color: #ffffff;
+  border-radius: 10px;
+  border: 3px solid #cccccc;
+  display: flex;
+  min-height: 340px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
+}
+
+/* ======== CONTENT ======== */
+#content {
+  background-color: #eafaf0;
+  border-radius: 10px;
+  border: 3px solid #006633;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  min-height: 340px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #004d26;
+  text-align: center;
+}
+
+.container-fluid > .row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+/* ======== RIGHT MENU (Video) ======== */
+#rightMenu {
+  position: relative;
+  background-color: #00331a;
+  border-radius: 10px;
+  border: 3px solid #004d26;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  height: 100%;
+  min-height: 290px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+#rightMenu .video-container {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%;
+  overflow: hidden;
+}
+
+#rightMenu .video-container iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border: none;
+}
+
+/* ======== FOOTER ======== */
+#footer {
+  background: linear-gradient(135deg, #009639, #006633);
+  border-radius: 12px;
+  border: 2px solid #004d26;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 45px;
+  padding: 20px 0;
+}
+
+/* Íconos del footer */
+.social-icon {
+  width: 42px;
+  height: 42px;
+  background-color: #ffffff;
+  border-radius: 50%;
+  padding: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+}
+
+.social-icon:hover {
+  transform: scale(1.2);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  background-color: #f0f0f0;
+}
