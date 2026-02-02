@@ -1,76 +1,72 @@
-# app.py  (APP HIJA para Script_Backend_Py.py)
-from flask import Flask, request
+from flask import Flask
 import mysql.connector
-
 from routes.class_vehiculo1 import Vehiculo
-from routes.class_matricula1 import Matricula
 
 app = Flask(__name__)
 
-# ======================================================
-# CONEXIÓN BD (igual a tu PHP)
-# ======================================================
+# -------------------------------
+# FUNCIÓN DE CONEXIÓN A LA BD
+# -------------------------------
 def conectar():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="123",
-        database="matriculacionfinal",
-        charset="utf8"
+    server = "localhost"
+    user = "root"
+    password = "123"
+    database = "matriculacionfinal"
+
+    c = mysql.connector.connect(
+        host=server,
+        user=user,
+        password=password,
+        database=database
     )
 
-# ======================================================
-# INDEX (equivalente a index.php)
-# IMPORTANTE: usamos links RELATIVOS ?m=V / ?m=M
-# para que NO se salga del prefijo /carpeta/app.py
-# ======================================================
-@app.route("/", methods=["GET", "POST"])
+    c.set_charset_collation(charset='utf8')
+    return c
+
+
+# -------------------------------
+# RUTA PRINCIPAL
+# -------------------------------
+@app.route("/")
 def index():
-    db = conectar()
-    objVehiculo = Vehiculo(db)
-    objMatricula = Matricula(db)
 
-    modo = request.args.get("m", "V")  # V por defecto
+    cn = conectar()
+    objetoVehiculo = Vehiculo(cn)
 
-    if modo == "M":
-        contenido = objMatricula.get_list()
-        titulo = "CRUD Matrículas"
-    else:
-        contenido = objVehiculo.get_list()
-        titulo = "Conexion Base de Datos"
-
-    html = f"""
+    # -------------------------------
+    # HTML BASE + BOOTSTRAP (AQUÍ ESTABA EL ERROR)
+    # -------------------------------
+    html = """
     <!DOCTYPE html>
     <html lang="es">
     <head>
         <meta charset="utf-8">
-        <title>{titulo}</title>
+        <title>Matriculación Vehicular</title>
 
-        <!-- Bootstrap CDN -->
+        <!-- BOOTSTRAP 5 -->
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-        <link rel="stylesheet"
-              href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
     </head>
 
     <body class="bg-light">
+    """
 
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-            <div class="container">
-                <span class="navbar-brand">CRUD</span>
+    # CONTENIDO
+    html += objetoVehiculo.get_list()
 
-                <!-- LINKS RELATIVOS: se quedan en /carpeta/app.py -->
-                <div class="navbar-nav">
-                    <a class="nav-link" href="?m=V">Vehículos</a>
-                    <a class="nav-link" href="?m=M">Matrículas</a>
-                </div>
-            </div>
-        </nav>
-
-        {contenido}
-
+    # CIERRE HTML
+    html += """
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     </body>
     </html>
     """
 
+    cn.close()
     return html
+
+
+# -------------------------------
+# EJECUCIÓN DE LA APP
+# -------------------------------
+if __name__ == "__main__":
+    app.run(debug=True)
