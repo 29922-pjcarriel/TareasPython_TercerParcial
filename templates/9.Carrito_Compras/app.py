@@ -1,126 +1,222 @@
-# app.py
-import base64, os
-import pymysql
-from pymysql.cursors import DictCursor
-from flask import Flask, request, redirect
+# app.py (Launcher-proof, sin redirect(), sin rutas absolutas)
+import os
+import base64
+import urllib.parse
+from flask import Flask, request, send_from_directory
 
-from constantes import DB_HOST, DB_USER, DB_PASS, DB_NAME, SECRET_KEY, UPLOAD_FOLDER
+from db import conectar
+from config import PORT
+
 from clases9.producto import Producto
 from clases9.cliente import Cliente
 from clases9.pedido import Pedido
 
 app = Flask(__name__)
-app.secret_key = SECRET_KEY
 
-def get_conn():
-    return pymysql.connect(
-        host=DB_HOST, user=DB_USER, password=DB_PASS, database=DB_NAME,
-        charset="utf8mb4", cursorclass=DictCursor, autocommit=True
-    )
+# =========================
+# Paths
+# =========================
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+IMG_DIR = os.path.join(BASE_DIR, "images", "productos")
+os.makedirs(IMG_DIR, exist_ok=True)
 
-def b64_decode(s: str) -> str:
-    return base64.b64decode(s.encode("utf-8")).decode("utf-8")
+# =========================
+# DB + clases
+# =========================
+cn = conectar()
+producto = Producto(cn, IMG_DIR)
+cliente = Cliente(cn)
+pedido = Pedido(cn)
 
-def b64_encode(s: str) -> str:
-    return base64.b64encode(s.encode("utf-8")).decode("utf-8")
+# =========================
+# Helpers
+# =========================
+def b64(text: str) -> str:
+    return base64.b64encode(text.encode("utf-8")).decode("utf-8")
 
+def b64d(text: str) -> str:
+    return base64.b64decode(text.encode("utf-8")).decode("utf-8")
+
+def U(op: str) -> str:
+    """
+    🔥 URL RELATIVA: mantiene el navegador en /9.Carrito_Compras/app.py
+    y evita que el launcher te saque al menú.
+    """
+    return f"?d={b64(op)}"
+
+def IMG(filename: str) -> str:
+    """
+    🔥 Imágenes por query en la MISMA ruta: evita /images/... que el launcher no reenvía.
+    """
+    return f"?img={urllib.parse.quote(filename)}"
+
+# =========================
+# Layout base
+# =========================
+def render_page(content: str) -> str:
+    return f"""
+    <!doctype html>
+    <html lang="es">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <title>Carrito CRUD</title>
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    </head>
+    <body class="bg-light">
+
+      <nav class="navbar navbar-dark bg-dark px-4">
+        <span class="navbar-brand">Carrito CRUD</span>
+        <div class="d-flex gap-2">
+          <a class="btn btn-outline-light btn-sm" href="{U("olist/0")}">Pedidos</a>
+          <a class="btn btn-outline-light btn-sm" href="{U("plist/0")}">Productos</a>
+          <a class="btn btn-outline-light btn-sm" href="{U("clist/0")}">Clientes</a>
+        </div>
+      </nav>
+
+      <main class="container py-4">
+        {content}
+      </main>
+
+    </body>
+    </html>
+    """
+
+# =========================
+# Única ruta (tu launcher llama siempre a "/")
+# =========================
 @app.route("/", methods=["GET", "POST"])
 def index():
-    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-    conn = get_conn()
 
-    pro = Producto(conn, UPLOAD_FOLDER)
-    cli = Cliente(conn)
-    ped = Pedido(conn)
+    # =========================
+    # 1) SERVIR IMÁGENES: ?img=xxx.jpg
+    # =========================
+    img = request.args.get("img")
+    if img:
+        img = os.path.basename(img)  # seguridad básica
+        return send_from_directory(IMG_DIR, img)
 
-    # ============ GET ROUTER (d=base64(op/id/id2)) ============
-    if request.method == "GET" and request.args.get("d"):
-        dato = b64_decode(request.args["d"])
-        tmp = dato.split("/")
-        op = tmp[0]
-        id1 = int(tmp[1]) if len(tmp) > 1 and tmp[1].isdigit() else 0
-        id2 = int(tmp[2]) if len(tmp) > 2 and tmp[2].isdigit() else 0
-
-        # PRODUCTOS
-        if op == "plist": return pro.html_list()
-        if op == "pnew":  return pro.html_form_new()
-        if op == "pact":  return pro.html_form_update(id1)
-        if op == "pdet":  return pro.html_detail(id1)
-        if op == "pdel":
-            pro.delete(id1)
-            return redirect("/?d=" + b64_encode("plist/0"))
-
-        # CLIENTES
-        if op == "clist": return cli.html_list()
-        if op == "cnew":  return cli.html_form_new()
-        if op == "cact":  return cli.html_form_update(id1)
-        if op == "cdet":  return cli.html_detail(id1)
-        if op == "cdel":
-            cli.delete(id1)
-            return redirect("/?d=" + b64_encode("clist/0"))
-
-        # PEDIDOS
-        if op == "olist": return ped.html_list()
-        if op == "onew":  return ped.html_form_new(cli.list())
-        if op == "oact":  return ped.html_form_update(id1, cli.list())
-        if op == "odel":
-            ped.delete(id1)
-            return redirect("/?d=" + b64_encode("olist/0"))
-        if op == "odet":  return ped.html_detail(id1)
-
-        # ITEMS / CARRITO
-        if op == "oitems":
-            return ped.html_items(id1, pro.list())
-        if op == "oadd":
-            ped.add_item(id1, id2)
-            return redirect("/?d=" + b64_encode(f"oitems/{id1}"))
-        if op == "orm":
-            ped.rm_item(id1, id2)
-            return redirect("/?d=" + b64_encode(f"oitems/{id1}"))
-        if op == "oclear":
-            ped.clear_items(id1)
-            return redirect("/?d=" + b64_encode(f"oitems/{id1}"))
-
-        # default
-        return redirect("/?d=" + b64_encode("olist/0"))
-
-    # ============ POST (op como en PHP) ============
+    # =========================
+    # 2) POST (SIN redirect)
+    # =========================
     if request.method == "POST":
         op = request.form.get("op", "")
 
-        # PRODUCTOS
-        if request.form.get("Guardar") and op == "pnew":
-            pro.save(request)
-            return redirect("/?d=" + b64_encode("plist/0"))
+        # ---- PRODUCTOS ----
+        if op == "pnew":
+            return render_page(producto.save(U))
+        if op == "pupdate":
+            return render_page(producto.update(U))
 
-        if request.form.get("Guardar") and op == "pupdate":
-            pro.update(request)
-            return redirect("/?d=" + b64_encode("plist/0"))
+        # ---- CLIENTES ----
+        if op == "cnew":
+            return render_page(cliente.save(U))
+        if op == "cupdate":
+            return render_page(cliente.update(U))
 
-        # CLIENTES
-        if request.form.get("Guardar") and op == "cnew":
-            cli.save(request.form)
-            return redirect("/?d=" + b64_encode("clist/0"))
+        # ---- PEDIDOS ----
+        # Nuevo pedido: seleccionar cliente -> guardar -> entrar a escoger productos
+        if op == "osave":
+            new_id = pedido.save_pedido()
+            return render_page(pedido.get_items(U, IMG, new_id))
 
-        if request.form.get("Guardar") and op == "cupdate":
-            cli.update(request.form)
-            return redirect("/?d=" + b64_encode("clist/0"))
+        # Actualizar cantidades carrito (en la pantalla de productos del pedido)
+        if op == "oitems_update":
+            pid = pedido.update_qty()
+            return render_page(pedido.get_items(U, IMG, pid))
 
-        # PEDIDOS
-        if request.form.get("Guardar") and op == "osave":
-            new_id = ped.save(request.form)
-            return redirect("/?d=" + b64_encode(f"oitems/{new_id}"))
+        # fallback
+        return render_page(pedido.get_list(U))
 
-        if request.form.get("Guardar") and op == "oupdate":
-            ped.update(request.form)
-            return redirect("/?d=" + b64_encode("olist/0"))
+    # =========================
+    # 3) GET (router d=base64) SIN redirect
+    # =========================
+    d = request.args.get("d", "")
+    if not d:
+        return render_page(pedido.get_list(U))
 
-        if request.form.get("Actualizar") and op == "oitems_update":
-            pedido_id = ped.update_qty(request.form)
-            return redirect("/?d=" + b64_encode(f"oitems/{pedido_id}"))
+    try:
+        decoded = b64d(d)
+    except Exception:
+        return render_page("<div class='alert alert-danger'>Parámetro inválido.</div>")
 
-    # inicio
-    return redirect("/?d=" + b64_encode("olist/0"))
+    parts = decoded.split("/")
+    action = parts[0]
+    id1 = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
+    id2 = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 0
+
+    # =========================
+    # PRODUCTOS
+    # =========================
+    if action == "plist":
+        return render_page(producto.get_list(U, IMG))
+
+    if action == "pnew":
+        return render_page(producto.get_form(U, IMG))
+
+    if action == "pact":
+        return render_page(producto.get_form(U, IMG, id1))
+
+    if action == "pdet":
+        return render_page(producto.get_detail(U, IMG, id1))
+
+    if action == "pdel":
+        return render_page(producto.delete(U, id1))
+
+    # =========================
+    # CLIENTES
+    # =========================
+    if action == "clist":
+        return render_page(cliente.get_list(U))
+
+    if action == "cnew":
+        return render_page(cliente.get_form(U))
+
+    if action == "cact":
+        return render_page(cliente.get_form(U, id1))
+
+    if action == "cdet":
+        return render_page(cliente.get_detail(U, id1))
+
+    if action == "cdel":
+        return render_page(cliente.delete(U, id1))
+
+    # =========================
+    # PEDIDOS
+    # =========================
+    if action == "olist":
+        return render_page(pedido.get_list(U))
+
+    if action == "onew":
+        return render_page(pedido.get_form(U))
+
+    if action == "odel":
+        pedido.delete_pedido(id1)
+        return render_page(pedido.get_list(U))
+
+    if action == "odet":
+        return render_page(pedido.get_detail(U, IMG, id1))
+
+    if action == "oitems":
+        return render_page(pedido.get_items(U, IMG, id1))
+
+    # carrito ops (SIN redirect)
+    if action == "oadd":
+        pedido.add_item(id1, id2)
+        return render_page(pedido.get_items(U, IMG, id1))
+
+    if action == "orm":
+        pedido.rm_item(id1, id2)
+        return render_page(pedido.get_items(U, IMG, id1))
+
+    if action == "oclear":
+        pedido.clear_items(id1)
+        return render_page(pedido.get_items(U, IMG, id1))
+
+    if action == "opay":
+        return render_page(pedido.pay(U, id1))
+
+    return render_page("<div class='alert alert-danger'>Operación no válida.</div>")
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=PORT)

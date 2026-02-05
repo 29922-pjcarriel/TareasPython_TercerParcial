@@ -1,391 +1,371 @@
-# clases9/pedido.py
-import base64
-from datetime import datetime
-
-def b64_encode(s: str) -> str:
-    return base64.b64encode(s.encode("utf-8")).decode("utf-8")
+from flask import request
 
 class Pedido:
-    def __init__(self, conn):
-        self.conn = conn
+    def __init__(self, cn):
+        self.cn = cn
 
-    # ---------- DB ----------
-    def list(self):
-        sql = """SELECT p.PedidoID, p.FechaPedido, c.RazonSocial
-                 FROM Pedidos p
-                 LEFT JOIN Clientes c ON c.ClienteID=p.ClienteID
-                 ORDER BY p.PedidoID DESC"""
-        with self.conn.cursor() as cur:
-            cur.execute(sql)
-            return cur.fetchall()
+    # =========================
+    # LISTADO DE PEDIDOS (sin botón "Productos" en la tabla)
+    # =========================
+    def get_list(self, U):
+        cur = self.cn.cursor(dictionary=True)
+        cur.execute("""
+            SELECT p.PedidoID, p.FechaPedido, c.RazonSocial
+            FROM Pedidos p
+            LEFT JOIN Clientes c ON c.ClienteID=p.ClienteID
+            ORDER BY p.PedidoID DESC
+        """)
+        rows = cur.fetchall()
 
-    def get(self, pedido_id: int):
-        with self.conn.cursor() as cur:
-            cur.execute("SELECT * FROM Pedidos WHERE PedidoID=%s", (pedido_id,))
-            return cur.fetchone()
+        html = f"""
+        <h2>Carritos de Compras (Pedidos)</h2>
+        <div class="text-end mb-3">
+          <a class="btn btn-success" href="{U('onew/0')}">Nuevo</a>
+        </div>
 
-    def delete(self, pedido_id: int):
-        with self.conn.cursor() as cur:
-            cur.execute("DELETE FROM PedidosItems WHERE PedidoID=%s", (pedido_id,))
-            cur.execute("DELETE FROM Pedidos WHERE PedidoID=%s", (pedido_id,))
-
-    def save(self, f):
-        cliente_id = int(f.get("ClienteID", 0))
-        fecha = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        with self.conn.cursor() as cur:
-            cur.execute("INSERT INTO Pedidos(ClienteID, FechaPedido) VALUES(%s,%s)", (cliente_id, fecha))
-            return cur.lastrowid
-
-    def update(self, f):
-        pid = int(f.get("PedidoID", 0))
-        cid = int(f.get("ClienteID", 0))
-        with self.conn.cursor() as cur:
-            cur.execute("UPDATE Pedidos SET ClienteID=%s WHERE PedidoID=%s", (cid, pid))
-
-    # ---------- ITEMS ----------
-    def items(self, pedido_id: int):
-        sql = """SELECT i.ProductoID, i.Cantidad, p.Descripcion, p.Precio, p.Imagen
-                 FROM PedidosItems i
-                 JOIN Productos p ON p.ProductoID=i.ProductoID
-                 WHERE i.PedidoID=%s
-                 ORDER BY p.ProductoID DESC"""
-        with self.conn.cursor() as cur:
-            cur.execute(sql, (pedido_id,))
-            data = cur.fetchall()
-
-        total = 0
-        for it in data:
-            it["Subtotal"] = float(it["Precio"]) * int(it["Cantidad"])
-            total += it["Subtotal"]
-        return data, total
-
-    def add_item(self, pedido_id: int, producto_id: int):
-        with self.conn.cursor() as cur:
-            cur.execute("""SELECT Cantidad FROM PedidosItems
-                           WHERE PedidoID=%s AND ProductoID=%s""", (pedido_id, producto_id))
-            row = cur.fetchone()
-            if row:
-                cur.execute("""UPDATE PedidosItems SET Cantidad=Cantidad+1
-                               WHERE PedidoID=%s AND ProductoID=%s""", (pedido_id, producto_id))
-            else:
-                cur.execute("""INSERT INTO PedidosItems(PedidoID,ProductoID,Cantidad)
-                               VALUES(%s,%s,1)""", (pedido_id, producto_id))
-
-    def rm_item(self, pedido_id: int, producto_id: int):
-        with self.conn.cursor() as cur:
-            cur.execute("DELETE FROM PedidosItems WHERE PedidoID=%s AND ProductoID=%s", (pedido_id, producto_id))
-
-    def clear_items(self, pedido_id: int):
-        with self.conn.cursor() as cur:
-            cur.execute("DELETE FROM PedidosItems WHERE PedidoID=%s", (pedido_id,))
-
-    def update_qty(self, form):
-        pedido_id = int(form.get("PedidoID", 0))
-        for key, val in form.items():
-            if key.startswith("qty[") and key.endswith("]"):
-                producto_id = int(key[4:-1])
-                qty = int(val or 0)
-                with self.conn.cursor() as cur:
-                    if qty <= 0:
-                        cur.execute("DELETE FROM PedidosItems WHERE PedidoID=%s AND ProductoID=%s",
-                                    (pedido_id, producto_id))
-                    else:
-                        cur.execute("""UPDATE PedidosItems SET Cantidad=%s
-                                       WHERE PedidoID=%s AND ProductoID=%s""",
-                                    (qty, pedido_id, producto_id))
-        return pedido_id
-
-    def detail(self, pedido_id: int):
-        with self.conn.cursor() as cur:
-            cur.execute("""SELECT p.FechaPedido, c.RazonSocial
-                           FROM Pedidos p
-                           LEFT JOIN Clientes c ON c.ClienteID=p.ClienteID
-                           WHERE p.PedidoID=%s""", (pedido_id,))
-            cab = cur.fetchone()
-
-            cur.execute("""SELECT i.Cantidad, pr.Descripcion, pr.Precio
-                           FROM PedidosItems i
-                           JOIN Productos pr ON pr.ProductoID=i.ProductoID
-                           WHERE i.PedidoID=%s""", (pedido_id,))
-            det = cur.fetchall()
-
-        total = 0
-        for d in det:
-            d["Subtotal"] = float(d["Precio"]) * int(d["Cantidad"])
-            total += d["Subtotal"]
-        return cab, det, total
-
-    # ---------- HTML ----------
-    def _layout(self, title: str, body: str) -> str:
-        nav = f"""
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-          <div class="container">
-            <a class="navbar-brand fw-bold" href="/">Carrito CRUD</a>
-            <div class="d-flex gap-2">
-              <a class="btn btn-outline-light btn-sm" href="/?d={b64_encode('olist/0')}">Pedidos</a>
-              <a class="btn btn-outline-light btn-sm" href="/?d={b64_encode('plist/0')}">Productos</a>
-              <a class="btn btn-outline-light btn-sm" href="/?d={b64_encode('clist/0')}">Clientes</a>
-            </div>
-          </div>
-        </nav>
-        """
-        return f"""<!doctype html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{title}</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-{nav}
-<div class="container my-4">{body}</div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-</body></html>"""
-
-    def html_list(self) -> str:
-        rows = ""
-        for p in self.list():
-            rs = p["RazonSocial"] or "(Sin cliente)"
-            rows += f"""
+        <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
+          <thead class="table-dark">
             <tr>
-              <td>{rs}</td>
-              <td>{p["FechaPedido"] or ""}</td>
+              <th>Cliente</th>
+              <th>Fecha</th>
+              <th class="text-center">Borrar</th>
+              <th class="text-center">Actualizar</th>
+              <th class="text-center">Detalle</th>
+            </tr>
+          </thead>
+          <tbody>
+        """
+
+        for r in rows:
+            pid = int(r["PedidoID"])
+            cliente = r.get("RazonSocial") or "-"
+            fecha = r.get("FechaPedido") or ""
+            html += f"""
+            <tr>
+              <td>{cliente}</td>
+              <td>{fecha}</td>
               <td class="text-center">
-                <a class="btn btn-danger btn-sm"
-                   href="/?d={b64_encode('odel/'+str(p['PedidoID']))}"
-                   onclick="return confirm('¿Eliminar este pedido?');">Borrar</a>
+                <a class="btn btn-danger btn-sm" href="{U(f"odel/{pid}")}" onclick="return confirm('¿Eliminar este pedido?');">Borrar</a>
               </td>
               <td class="text-center">
-                <a class="btn btn-warning btn-sm"
-                   href="/?d={b64_encode('oact/'+str(p['PedidoID']))}">Actualizar</a>
+                <!-- En PHP: "Actualizar" entra a elegir productos -->
+                <a class="btn btn-warning btn-sm" href="{U(f"oitems/{pid}")}">Actualizar</a>
               </td>
               <td class="text-center">
-                <a class="btn btn-info btn-sm"
-                   href="/?d={b64_encode('odet/'+str(p['PedidoID']))}">Detalle</a>
+                <a class="btn btn-info btn-sm" href="{U(f"odet/{pid}")}">Detalle</a>
               </td>
             </tr>
             """
-        body = f"""
-        <h2>Carritos de Compras (Pedidos)</h2>
-        <div class="mb-3 text-end">
-          <a class="btn btn-success" href="/?d={b64_encode('onew/0')}">Nuevo</a>
-        </div>
-        <div class="table-responsive">
-          <table class="table table-striped table-hover align-middle">
-            <thead class="table-dark">
-              <tr>
-                <th>Cliente</th><th>Fecha</th>
-                <th colspan="3" class="text-center">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>{rows}</tbody>
-          </table>
-        </div>
-        """
-        return self._layout("Pedidos", body)
 
-    def html_form_new(self, clientes) -> str:
-        return self._layout("Nuevo Pedido", self._form_html("new", None, clientes))
+        html += "</tbody></table></div>"
+        return html
 
-    def html_form_update(self, pedido_id: int, clientes) -> str:
-        return self._layout("Actualizar Pedido", self._form_html("update", self.get(pedido_id), clientes))
-
-    def _form_html(self, modo: str, pedido, clientes):
-        if modo == "new":
-            op = "osave"
-            pid = 0
-            sel_id = 0
-            fecha_txt = "Se genera automáticamente"
-            titulo = "Formulario Carrito (Pedido)"
-        else:
-            op = "oupdate"
-            pid = pedido["PedidoID"]
-            sel_id = pedido["ClienteID"] or 0
-            fecha_txt = pedido["FechaPedido"] or ""
-            titulo = "Actualizar Pedido"
-
-        opts = '<option value="">-- Seleccione Cliente --</option>'
-        for c in clientes:
-            selected = "selected" if int(c["ClienteID"]) == int(sel_id) else ""
-            opts += f'<option value="{c["ClienteID"]}" {selected}>{c["RazonSocial"]}</option>'
+    # =========================
+    # NUEVO PEDIDO: solo cliente
+    # =========================
+    def get_form(self, U):
+        cur = self.cn.cursor(dictionary=True)
+        cur.execute("SELECT ClienteID, RazonSocial FROM Clientes ORDER BY RazonSocial")
+        opts = "".join(
+            f"<option value='{c['ClienteID']}'>{c['RazonSocial']}</option>"
+            for c in cur.fetchall()
+        )
 
         return f"""
-        <div class="card shadow-sm">
-          <div class="card-header bg-success text-white"><b>{titulo}</b></div>
-          <div class="card-body">
-            <form method="POST" action="/">
-              <input type="hidden" name="op" value="{op}">
-              <input type="hidden" name="PedidoID" value="{pid}">
-
-              <div class="row g-3">
-                <div class="col-md-6">
-                  <label class="form-label">Cliente</label>
-                  <select class="form-select" name="ClienteID" required>
-                    {opts}
-                  </select>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label">Fecha Pedido</label>
-                  <input class="form-control" value="{fecha_txt}" readonly>
-                  <small class="text-muted">Se genera automáticamente con la hora actual.</small>
-                </div>
-              </div>
-
-              <div class="mt-3 d-flex gap-2">
-                <button class="btn btn-success" type="submit" name="Guardar">GUARDAR</button>
-                <a class="btn btn-secondary" href="/?d={b64_encode('olist/0')}">REGRESAR</a>
-              </div>
-            </form>
+        <h2>Nuevo Pedido</h2>
+        <form method="POST">
+          <input type="hidden" name="op" value="osave">
+          <div class="mb-3">
+            <label class="form-label">Cliente</label>
+            <select class="form-select" name="ClienteID" required>
+              {opts}
+            </select>
           </div>
-        </div>
+          <button class="btn btn-primary" type="submit" name="Guardar" value="1">Guardar</button>
+          <a class="btn btn-secondary" href="{U("olist/0")}">Cancelar</a>
+        </form>
         """
 
-    def html_items(self, pedido_id: int, productos) -> str:
-        items, total = self.items(pedido_id)
+    # =========================
+    # ELEGIR PRODUCTOS (pantalla tipo PHP, con fotos)
+    # =========================
+    def get_items(self, U, IMG, pid):
+        pid = int(pid)
 
-        # tabla items
+        # Lista productos
+        cur = self.cn.cursor(dictionary=True)
+        cur.execute("SELECT ProductoID, Descripcion, Precio, Imagen FROM Productos ORDER BY Descripcion")
+        productos = cur.fetchall()
+
+        # Items del pedido
+        cur2 = self.cn.cursor(dictionary=True)
+        cur2.execute("""
+            SELECT i.PedidoItemID, i.ProductoID, i.Cantidad,
+                   p.Descripcion, p.Precio, p.Imagen
+            FROM PedidosItems i
+            JOIN Productos p ON p.ProductoID=i.ProductoID
+            WHERE i.PedidoID=%s
+            ORDER BY i.PedidoItemID DESC
+        """, (pid,))
+        items = cur2.fetchall()
+
+        # LEFT: tabla agregados
         rows = ""
-        if items:
+        total = 0.0
+
+        if not items:
+            rows = """
+            <tr>
+              <td colspan="5">
+                <div class="alert alert-info mb-0">Aún no agregas productos.</div>
+              </td>
+            </tr>
+            """
+        else:
             for it in items:
+                precio = float(it["Precio"])
+                qty = int(it["Cantidad"])
+                subtotal = precio * qty
+                total += subtotal
+                img = it.get("Imagen") or "no-image.png"
+
                 rows += f"""
                 <tr>
-                  <td>{it["Descripcion"]}</td>
-                  <td>${float(it["Precio"]):.2f}</td>
-                  <td style="width:120px">
-                    <input class="form-control" type="number" min="0"
-                           name="qty[{it["ProductoID"]}]" value="{it["Cantidad"]}">
-                  </td>
-                  <td>${float(it["Subtotal"]):.2f}</td>
                   <td>
-                    <a class="btn btn-sm btn-outline-danger"
-                       href="/?d={b64_encode(f'orm/{pedido_id}/{it["ProductoID"]}')}">X</a>
+                    <div class="d-flex gap-2 align-items-center">
+                      <img src="{IMG(img)}" style="width:52px;height:52px;object-fit:cover;border-radius:10px;border:1px solid #ddd;">
+                      <div>{it["Descripcion"]}</div>
+                    </div>
+                  </td>
+                  <td>${precio:.2f}</td>
+                  <td style="width:140px">
+                    <input class="form-control" type="number" name="qty_{it["PedidoItemID"]}" value="{qty}" min="1">
+                  </td>
+                  <td class="fw-bold">${subtotal:.2f}</td>
+                  <td class="text-center">
+                    <a class="btn btn-danger btn-sm" href="{U(f"orm/{pid}/{it['ProductoID']}")}">Quitar</a>
                   </td>
                 </tr>
                 """
-        else:
-            rows = """<tr><td colspan="5">
-                        <div class="alert alert-info m-0">Aún no agregas productos.</div>
-                      </td></tr>"""
 
-        # cards productos para agregar
-        cards = ""
-        for pr in productos:
-            cards += f"""
-            <div class="col-12">
-              <div class="card shadow-sm">
-                <div class="row g-0">
-                  <div class="col-4">
-                    <img src="/static/images/productos/{pr["Imagen"]}" class="img-fluid rounded-start"
-                         style="height:90px;object-fit:cover" alt="">
-                  </div>
-                  <div class="col-8">
-                    <div class="card-body p-2">
-                      <div class="fw-bold">{pr["Descripcion"]}</div>
-                      <div>${float(pr["Precio"]):.2f}</div>
-                      <a class="btn btn-sm btn-success mt-1 w-100"
-                         href="/?d={b64_encode(f'oadd/{pedido_id}/{pr["ProductoID"]}')}">Agregar</a>
-                    </div>
-                  </div>
+        # RIGHT: cards productos
+        right_cards = ""
+        for p in productos:
+            img = p.get("Imagen") or "no-image.png"
+            right_cards += f"""
+            <div class="card mb-3 border-0 shadow-sm">
+              <div class="card-body d-flex gap-3 align-items-center">
+                <img src="{IMG(img)}" style="width:90px;height:70px;object-fit:cover;border-radius:10px;border:1px solid #ddd;">
+                <div class="flex-grow-1">
+                  <div class="h6 mb-1">{p["Descripcion"]}</div>
+                  <div class="fw-bold">${float(p["Precio"]):.2f}</div>
+                  <a class="btn btn-success w-100 mt-2" href="{U(f"oadd/{pid}/{p['ProductoID']}")}">Agregar</a>
                 </div>
               </div>
             </div>
             """
 
-        body = f"""
-        <h4 class="mb-3">Elegir qué va a comprar (Pedido #{pedido_id})</h4>
+        return f"""
+        <h2>Elegir qué va a comprar (Pedido #{pid})</h2>
 
         <div class="mb-3 d-flex gap-2 flex-wrap">
-          <a class="btn btn-outline-secondary" href="/?d={b64_encode('olist/0')}">Volver a Pedidos</a>
-          <a class="btn btn-outline-danger"
-             href="/?d={b64_encode(f'oclear/{pedido_id}/0')}"
-             onclick="return confirm('¿Vaciar productos del pedido?');">Vaciar</a>
-          <a class="btn btn-info" href="/?d={b64_encode(f'odet/{pedido_id}') }">Ver Detalle</a>
+          <a class="btn btn-outline-secondary" href="{U("olist/0")}">Volver a Pedidos</a>
+          <a class="btn btn-outline-danger" href="{U(f"oclear/{pid}")}" onclick="return confirm('¿Vaciar carrito?');">Vaciar</a>
+          <a class="btn btn-info text-white" href="{U(f"odet/{pid}")}">Ver Detalle</a>
         </div>
 
-        <div class="row g-3">
+        <div class="row g-4">
           <div class="col-lg-7">
-            <div class="card shadow-sm">
-              <div class="card-header bg-dark text-white">Productos agregados</div>
+            <div class="card shadow-sm border-0">
+              <div class="card-header bg-dark text-white"><b>Productos agregados</b></div>
               <div class="card-body">
-                <form method="POST" action="/">
+
+                <form method="POST">
                   <input type="hidden" name="op" value="oitems_update">
-                  <input type="hidden" name="PedidoID" value="{pedido_id}">
+                  <input type="hidden" name="PedidoID" value="{pid}">
 
                   <div class="table-responsive">
-                  <table class="table table-striped align-middle">
-                    <thead>
-                      <tr>
-                        <th>Producto</th><th>Precio</th><th>Cantidad</th><th>Subtotal</th><th>Quitar</th>
-                      </tr>
-                    </thead>
-                    <tbody>{rows}</tbody>
-                    <tfoot>
-                      <tr>
-                        <th colspan="3" class="text-end">TOTAL</th>
-                        <th colspan="2">${float(total):.2f}</th>
-                      </tr>
-                    </tfoot>
-                  </table>
+                    <table class="table table-striped align-middle mb-2">
+                      <thead>
+                        <tr>
+                          <th>Producto</th>
+                          <th>Precio</th>
+                          <th>Cantidad</th>
+                          <th>Subtotal</th>
+                          <th class="text-center">Quitar</th>
+                        </tr>
+                      </thead>
+                      <tbody>{rows}</tbody>
+                    </table>
                   </div>
 
-                  <button class="btn btn-primary" type="submit" name="Actualizar">Actualizar cantidades</button>
+                  <div class="d-flex justify-content-end border-top pt-3">
+                    <h5 class="mb-0">TOTAL&nbsp;&nbsp; <span class="fw-bold">${total:.2f}</span></h5>
+                  </div>
+
+                  <div class="mt-3 d-flex gap-2">
+                    <button class="btn btn-primary" type="submit" name="Actualizar" value="1">Actualizar cantidades</button>
+                    <a class="btn btn-success" href="{U(f"opay/{pid}")}">PAGAR</a>
+                  </div>
                 </form>
+
               </div>
             </div>
           </div>
 
           <div class="col-lg-5">
-            <div class="card shadow-sm">
-              <div class="card-header bg-success text-white">Agregar productos</div>
-              <div class="card-body">
-                <div class="row g-2">{cards}</div>
-              </div>
+            <div class="card shadow-sm border-0">
+              <div class="card-header text-white" style="background:#198754;"><b>Agregar productos</b></div>
+              <div class="card-body">{right_cards}</div>
             </div>
           </div>
         </div>
         """
-        return self._layout("Carrito", body)
 
-    def html_detail(self, pedido_id: int) -> str:
-        cab, det, total = self.detail(pedido_id)
+    # =========================
+    # DETALLE REAL (arreglado)
+    # =========================
+    def get_detail(self, U, IMG, pid):
+        pid = int(pid)
+
+        cur = self.cn.cursor(dictionary=True)
+        cur.execute("""
+            SELECT p.PedidoID, p.FechaPedido, c.RazonSocial
+            FROM Pedidos p
+            LEFT JOIN Clientes c ON c.ClienteID=p.ClienteID
+            WHERE p.PedidoID=%s
+        """, (pid,))
+        cab = cur.fetchone()
+        if not cab:
+            return "<div class='alert alert-warning'>Pedido no encontrado.</div>"
+
+        cur2 = self.cn.cursor(dictionary=True)
+        cur2.execute("""
+            SELECT i.Cantidad, p.Descripcion, p.Precio, p.Imagen
+            FROM PedidosItems i
+            JOIN Productos p ON p.ProductoID=i.ProductoID
+            WHERE i.PedidoID=%s
+        """, (pid,))
+        items = cur2.fetchall()
 
         rows = ""
-        for d in det:
-            rows += f"""
-            <tr>
-              <td>{d["Descripcion"]}</td>
-              <td>${float(d["Precio"]):.2f}</td>
-              <td>{d["Cantidad"]}</td>
-              <td>${float(d["Subtotal"]):.2f}</td>
-            </tr>
-            """
+        total = 0.0
 
-        body = f"""
-        <div class="card shadow-sm">
-          <div class="card-header bg-dark text-white"><b>Detalle del Pedido</b></div>
-          <div class="card-body">
-            <p><b>Cliente:</b> {cab["RazonSocial"] if cab and cab.get("RazonSocial") else ""}</p>
-            <p><b>Fecha:</b> {cab["FechaPedido"] if cab and cab.get("FechaPedido") else ""}</p>
+        if not items:
+            rows = "<tr><td colspan='5'><div class='alert alert-info mb-0'>Pedido sin productos.</div></td></tr>"
+        else:
+            for it in items:
+                precio = float(it["Precio"])
+                qty = int(it["Cantidad"])
+                sub = precio * qty
+                total += sub
+                img = it.get("Imagen") or "no-image.png"
+                rows += f"""
+                <tr>
+                  <td>
+                    <div class="d-flex gap-2 align-items-center">
+                      <img src="{IMG(img)}" style="width:52px;height:52px;object-fit:cover;border-radius:10px;border:1px solid #ddd;">
+                      <div>{it["Descripcion"]}</div>
+                    </div>
+                  </td>
+                  <td>${precio:.2f}</td>
+                  <td>{qty}</td>
+                  <td>${sub:.2f}</td>
+                </tr>
+                """
 
-            <div class="table-responsive">
-              <table class="table table-striped">
-                <thead>
-                  <tr><th>Producto</th><th>Precio</th><th>Cantidad</th><th>Subtotal</th></tr>
-                </thead>
-                <tbody>{rows}</tbody>
-                <tfoot>
-                  <tr>
-                    <th colspan="3" class="text-end">TOTAL</th>
-                    <th>${float(total):.2f}</th>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
+        return f"""
+        <h2>Detalle del Pedido #{pid}</h2>
 
-            <a class="btn btn-outline-secondary" href="/?d={b64_encode('olist/0')}">Regresar</a>
-            <a class="btn btn-success ms-2" href="/?d={b64_encode(f'oitems/{pedido_id}')}">Volver al carrito</a>
-          </div>
+        <div class="card p-3 mb-3">
+          <p class="mb-1"><b>Cliente:</b> {cab.get("RazonSocial") or "-"}</p>
+          <p class="mb-0"><b>Fecha:</b> {cab.get("FechaPedido") or ""}</p>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-striped align-middle">
+            <thead class="table-dark">
+              <tr><th>Producto</th><th>Precio</th><th>Cantidad</th><th>Subtotal</th></tr>
+            </thead>
+            <tbody>{rows}</tbody>
+          </table>
+        </div>
+
+        <h4 class="text-end">TOTAL ${total:.2f}</h4>
+
+        <div class="mt-3 d-flex gap-2">
+          <a class="btn btn-primary" href="{U(f"oitems/{pid}")}">Actualizar (Productos)</a>
+          <a class="btn btn-secondary" href="{U("olist/0")}">Volver</a>
         </div>
         """
-        return self._layout("Detalle Pedido", body)
+
+    # =========================
+    # OPERACIONES
+    # =========================
+    def save_pedido(self):
+        cid = int(request.form["ClienteID"])
+        cur = self.cn.cursor()
+        cur.execute("INSERT INTO Pedidos (ClienteID, FechaPedido) VALUES (%s, NOW())", (cid,))
+        return cur.lastrowid
+
+    def delete_pedido(self, pid):
+        cur = self.cn.cursor()
+        cur.execute("DELETE FROM PedidosItems WHERE PedidoID=%s", (pid,))
+        cur.execute("DELETE FROM Pedidos WHERE PedidoID=%s", (pid,))
+
+    def add_item(self, pid, prod):
+        pid = int(pid); prod = int(prod)
+        cur = self.cn.cursor(dictionary=True)
+        cur.execute("SELECT PedidoItemID, Cantidad FROM PedidosItems WHERE PedidoID=%s AND ProductoID=%s", (pid, prod))
+        r = cur.fetchone()
+
+        cur2 = self.cn.cursor()
+        if r:
+            cur2.execute("UPDATE PedidosItems SET Cantidad=Cantidad+1 WHERE PedidoItemID=%s", (r["PedidoItemID"],))
+        else:
+            cur2.execute("INSERT INTO PedidosItems (PedidoID, ProductoID, Cantidad) VALUES (%s,%s,1)", (pid, prod))
+
+    def rm_item(self, pid, prod):
+        pid = int(pid); prod = int(prod)
+        cur = self.cn.cursor()
+        cur.execute("DELETE FROM PedidosItems WHERE PedidoID=%s AND ProductoID=%s", (pid, prod))
+
+    def clear_items(self, pid):
+        pid = int(pid)
+        cur = self.cn.cursor()
+        cur.execute("DELETE FROM PedidosItems WHERE PedidoID=%s", (pid,))
+
+    def update_qty(self):
+        pid = int(request.form["PedidoID"])
+        cur = self.cn.cursor(dictionary=True)
+        cur.execute("SELECT PedidoItemID FROM PedidosItems WHERE PedidoID=%s", (pid,))
+        items = cur.fetchall()
+
+        cur2 = self.cn.cursor()
+        for it in items:
+            iid = int(it["PedidoItemID"])
+            qty = int(request.form.get(f"qty_{iid}", "1"))
+            if qty < 1:
+                qty = 1
+            cur2.execute("UPDATE PedidosItems SET Cantidad=%s WHERE PedidoItemID=%s", (qty, iid))
+
+        return pid
+
+    def pay(self, U, pid):
+        pid = int(pid)
+        # (Opcional) marcar estado si tu tabla lo tiene; si no, no rompe.
+        try:
+            cur = self.cn.cursor()
+            cur.execute("UPDATE Pedidos SET Estado='PAGADO' WHERE PedidoID=%s", (pid,))
+        except Exception:
+            pass
+
+        return f"""
+        <div class="alert alert-success">✅ Pedido pagado correctamente.</div>
+        <script>
+          setTimeout(function() {{
+            window.location = "{U("olist/0")}";
+          }}, 1200);
+        </script>
+        """
