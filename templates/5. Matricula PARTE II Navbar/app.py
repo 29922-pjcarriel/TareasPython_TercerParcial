@@ -11,9 +11,9 @@ RUTA_CLASES = os.path.join(BASE_DIR, "clases")
 if RUTA_CLASES not in sys.path:
     sys.path.insert(0, RUTA_CLASES)
 
-from constantes import SERVER, USER, PASS, BD, PORT
-from vehiculo import Vehiculo
-from matricula import Matricula
+from constantes5 import SERVER, USER, PASS, BD, PORT
+from clases.vehiculo import Vehiculo
+from clases.matricula import Matricula
 
 app = Flask(__name__)
 
