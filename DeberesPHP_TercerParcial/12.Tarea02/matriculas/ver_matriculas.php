@@ -1,25 +1,24 @@
 <?php
 // =====================================================
 // ver_matriculas.php
-// Muestra las matrículas de un vehículo
+// CONSULTA DE MATRÍCULAS POR SESIÓN
 // SOLO AGENTE (rol = R)
-// Usa el ID del vehículo guardado en SESIÓN
 // =====================================================
 
 session_start();
 
 // -----------------------------------------------------
-// Validar acceso (solo AGENTE)
+// Validar acceso
 // -----------------------------------------------------
 if (!isset($_SESSION["rol"]) || $_SESSION["rol"] !== "R") {
-    die("Acceso denegado. Solo el rol AGENTE puede consultar matrículas.");
+    die("Acceso denegado.");
 }
 
 // -----------------------------------------------------
-// Validar que exista el vehículo en sesión
+// Validar vehículo en sesión
 // -----------------------------------------------------
 if (!isset($_SESSION["vehiculo_id"])) {
-    die("No se ha seleccionado ningún vehículo para consultar.");
+    die("No se ha seleccionado ningún vehículo.");
 }
 
 $vehiculo_id = $_SESSION["vehiculo_id"];
@@ -27,16 +26,23 @@ $vehiculo_id = $_SESSION["vehiculo_id"];
 require_once(__DIR__ . "/../conexion/conexion_matriculacion.php");
 
 // -----------------------------------------------------
-// Obtener información del vehículo
+// Información COMPLETA del vehículo
 // -----------------------------------------------------
 $sqlVehiculo = "
-    SELECT 
-        v.placa,
-        m.descripcion AS marca,
-        v.anio
-    FROM vehiculo v
-    JOIN marca m ON v.marca = m.id
-    WHERE v.id = ?
+SELECT 
+    v.placa,
+    m.descripcion AS marca,
+    v.motor,
+    v.chasis,
+    v.combustible,
+    v.anio,
+    c.descripcion AS color,
+    v.avaluo,
+    v.foto
+FROM vehiculo v
+JOIN marca m ON v.marca = m.id
+JOIN color c ON v.color = c.id
+WHERE v.id = ?
 ";
 
 $stmtVeh = $cnMatriculacion->prepare($sqlVehiculo);
@@ -48,17 +54,17 @@ if (!$vehiculo) {
 }
 
 // -----------------------------------------------------
-// Obtener matrículas del vehículo (solo años matriculados)
+// Matrículas (solo años matriculados)
 // -----------------------------------------------------
 $sqlMatriculas = "
-    SELECT 
-        m.anio,
-        m.fecha,
-        a.descripcion AS agencia
-    FROM matricula m
-    JOIN agencia a ON m.agencia = a.id
-    WHERE m.vehiculo = ?
-    ORDER BY m.anio
+SELECT 
+    m.anio,
+    m.fecha,
+    a.descripcion AS agencia
+FROM matricula m
+JOIN agencia a ON m.agencia = a.id
+WHERE m.vehiculo = ?
+ORDER BY m.anio
 ";
 
 $stmtMat = $cnMatriculacion->prepare($sqlMatriculas);
@@ -72,17 +78,14 @@ $matriculas = $stmtMat->fetchAll();
     <title>Consulta de Matrículas</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <!-- Bootstrap -->
     <link rel="stylesheet"
           href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
-
-    <!-- Estilos -->
     <link rel="stylesheet" href="../Recursos/css/estilos.css">
 </head>
 
 <body>
 
-<div class="container" style="margin-top:30px; max-width:900px;">
+<div class="container" style="margin-top:30px; max-width:1000px;">
 
     <div class="panel panel-success">
         <div class="panel-heading">
@@ -91,62 +94,71 @@ $matriculas = $stmtMat->fetchAll();
 
         <div class="panel-body">
 
-            <!-- Información del vehículo -->
+            <!-- VEHÍCULO -->
             <h4>Información del Vehículo</h4>
-            <table class="table table-bordered">
-                <tr>
-                    <th>Placa</th>
-                    <td><?= htmlspecialchars($vehiculo["placa"]) ?></td>
-                </tr>
-                <tr>
-                    <th>Marca</th>
-                    <td><?= htmlspecialchars($vehiculo["marca"]) ?></td>
-                </tr>
-                <tr>
-                    <th>Año</th>
-                    <td><?= $vehiculo["anio"] ?></td>
-                </tr>
-            </table>
+
+            <div class="row">
+                <div class="col-sm-4 text-center">
+                    <?php if ($vehiculo["foto"]): ?>
+                        <img src="../Recursos/img/<?= htmlspecialchars($vehiculo["foto"]) ?>"
+                             class="img-thumbnail"
+                             style="max-width:100%;">
+                    <?php else: ?>
+                        <img src="../Recursos/img/no-image.png"
+                             class="img-thumbnail"
+                             style="max-width:100%;">
+                    <?php endif; ?>
+                </div>
+
+                <div class="col-sm-8">
+                    <table class="table table-bordered">
+                        <tr><th>Placa</th><td><?= $vehiculo["placa"] ?></td></tr>
+                        <tr><th>Marca</th><td><?= $vehiculo["marca"] ?></td></tr>
+                        <tr><th>Motor</th><td><?= $vehiculo["motor"] ?></td></tr>
+                        <tr><th>Chasis</th><td><?= $vehiculo["chasis"] ?></td></tr>
+                        <tr><th>Combustible</th><td><?= $vehiculo["combustible"] ?></td></tr>
+                        <tr><th>Año</th><td><?= $vehiculo["anio"] ?></td></tr>
+                        <tr><th>Color</th><td><?= $vehiculo["color"] ?></td></tr>
+                        <tr><th>Avalúo</th><td>$ <?= number_format($vehiculo["avaluo"], 2) ?></td></tr>
+                    </table>
+                </div>
+            </div>
 
             <hr>
 
-            <!-- Matrículas -->
+            <!-- MATRÍCULAS -->
             <h4>Historial de Matrículas</h4>
 
-            <?php if (count($matriculas) === 0) : ?>
+            <?php if (count($matriculas) === 0): ?>
                 <div class="alert alert-warning">
                     Este vehículo no registra matrículas.
                 </div>
-            <?php else : ?>
-                <div class="table-responsive">
-                    <table class="table table-striped table-bordered">
-                        <thead class="bg-success">
+            <?php else: ?>
+                <table class="table table-striped table-bordered">
+                    <thead class="bg-success">
+                        <tr>
+                            <th>Año</th>
+                            <th>Fecha</th>
+                            <th>Agencia</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($matriculas as $m): ?>
                             <tr>
-                                <th>Año</th>
-                                <th>Fecha</th>
-                                <th>Agencia</th>
+                                <td><?= $m["anio"] ?></td>
+                                <td><?= $m["fecha"] ?></td>
+                                <td><?= $m["agencia"] ?></td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($matriculas as $m) : ?>
-                                <tr>
-                                    <td><?= $m["anio"] ?></td>
-                                    <td><?= $m["fecha"] ?></td>
-                                    <td><?= htmlspecialchars($m["agencia"]) ?></td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
             <?php endif; ?>
 
             <hr>
 
-            <!-- Botones -->
             <a href="../vehiculos/vehiculos.php" class="btn btn-default">
                 Volver a Vehículos
             </a>
-
             <a href="../index.php" class="btn btn-primary">
                 Inicio
             </a>

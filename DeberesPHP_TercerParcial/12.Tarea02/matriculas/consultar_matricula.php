@@ -1,41 +1,28 @@
 <?php
 // =====================================================
-// matriculas/consultar_matricula.php
-// SOLO AGENTE (rol = R)
-// Guarda el ID del vehículo en SESIÓN y redirige a ver_matriculas.php
-// Si NO viene id, redirige a vehiculos.php con mensaje (por SESIÓN)
+// consultar_matricula.php
+// SOLO AGENTE
+// Guarda el vehículo en SESIÓN
 // =====================================================
 
 session_start();
 
-// -----------------------------------------------------
-// Validar acceso (solo AGENTE)
-// -----------------------------------------------------
+// Solo AGENTE
 if (!isset($_SESSION["rol"]) || $_SESSION["rol"] !== "R") {
-    // Mejor redirigir al inicio en vez de die()
     header("Location: ../index.php");
     exit;
 }
 
-// -----------------------------------------------------
-// Si NO viene id válido => regresar a vehículos con mensaje
-// -----------------------------------------------------
+// Validar ID
 if (!isset($_GET["id"]) || !is_numeric($_GET["id"])) {
-
-    // Mensaje para mostrar en vehiculos.php (lo estás leyendo ahí con $_SESSION["msg_consultar"])
-    $_SESSION["msg_consultar"] = "Para consultar matrículas debes seleccionar un vehículo desde la lista.";
-
+    $_SESSION["msg"] = "Debe seleccionar un vehículo válido.";
     header("Location: ../vehiculos/vehiculos.php");
     exit;
 }
 
-// -----------------------------------------------------
-// Guardar ID del vehículo en sesión
-// -----------------------------------------------------
+// Guardar contexto
 $_SESSION["vehiculo_id"] = (int) $_GET["id"];
 
-// -----------------------------------------------------
-// Redirigir a la vista de matrículas
-// -----------------------------------------------------
+// Redirigir a la vista
 header("Location: ver_matriculas.php");
 exit;

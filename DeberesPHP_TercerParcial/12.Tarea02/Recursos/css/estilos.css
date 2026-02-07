@@ -321,3 +321,88 @@ p {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
   background-color: #f0f0f0;
 }
+
+/* ================================
+   MODAL LOGIN - DISEÑO MODERNO
+================================ */
+
+.modal-content {
+    border-radius: 10px;
+    box-shadow: 0 15px 40px rgba(0,0,0,.3);
+    border: none;
+}
+
+.modal-header {
+    background: linear-gradient(135deg, #1b5e20, #43a047);
+    color: #fff;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    text-align: center;
+}
+
+.modal-header h4 {
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.modal-body {
+    padding: 25px;
+}
+
+.modal-body label {
+    font-weight: 600;
+    color: #2e7d32;
+}
+
+.modal-body .form-control {
+    height: 45px;
+    border-radius: 6px;
+    font-size: 15px;
+}
+
+.modal-footer {
+    padding: 15px 25px;
+    border-top: none;
+}
+
+.modal-footer .btn {
+    height: 45px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 25px;
+}
+
+/* ================================
+   NAVBAR MEJORADA
+================================ */
+
+.navbar-inverse {
+    background: linear-gradient(135deg, #1b5e20, #2e7d32);
+    border: none;
+}
+
+.navbar-inverse .navbar-brand,
+.navbar-inverse .navbar-nav > li > a,
+.navbar-text {
+    color: #fff !important;
+    font-weight: 500;
+}
+
+.navbar-inverse .navbar-nav > li > a:hover {
+    background-color: rgba(255,255,255,0.15);
+    border-radius: 4px;
+}
+
+/* ================================
+   BOTONES
+================================ */
+
+.btn-success {
+    background: linear-gradient(135deg, #2e7d32, #66bb6a);
+    border: none;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #c62828, #ef5350);
+    border: none;
+}

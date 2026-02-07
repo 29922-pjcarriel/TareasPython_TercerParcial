@@ -1,19 +1,19 @@
 <?php
 // =====================================================
-// crear_usuario.php
-// SOLO SUPERADM (rol = C)
-// Crea usuarios AGENTE (rol = R)
-// Username = placa del vehículo
+// usuarios/crear_usuario.php
+// SOLO SUPERADMIN (rol = C)
+// Puede crear usuarios AGENTE y ADMIN
 // Password fijo = 123
 // =====================================================
 
 session_start();
 
 // -----------------------------------------------------
-// Validar acceso (solo SUPERADM)
+// Validar acceso (solo SUPERADMIN)
 // -----------------------------------------------------
 if (!isset($_SESSION["rol"]) || $_SESSION["rol"] !== "C") {
-    die("Acceso denegado. Solo SUPERADM puede crear usuarios.");
+    header("Location: ../index.php");
+    exit;
 }
 
 require_once(__DIR__ . "/../conexion/conexion_usuarios.php");
@@ -27,34 +27,42 @@ $error   = "";
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     $username = trim($_POST["username"] ?? "");
+    $rol_id   = $_POST["rol_id"] ?? "";
 
-    if ($username === "") {
-        $error = "Debe ingresar el username (placa del vehículo).";
+    if ($username === "" || $rol_id === "") {
+        $error = "Todos los campos son obligatorios.";
     } else {
 
-        // -------------------------------------------------
-        // Verificar que el username NO se repita
-        // -------------------------------------------------
-        $sql = "SELECT COUNT(*) FROM usuarios WHERE username = ?";
-        $stmt = $cnUsuarios->prepare($sql);
-        $stmt->execute([$username]);
-
-        if ($stmt->fetchColumn() > 0) {
-            $error = "El username ya existe. No se permiten duplicados.";
+        // ---------------------------------------------
+        // Validar rol permitido (AGENTE o ADMIN)
+        // ---------------------------------------------
+        if (!in_array($rol_id, ["2", "5"])) {
+            $error = "Rol no permitido.";
         } else {
 
-            // -------------------------------------------------
-            // Insertar usuario AGENTE
-            // Rol AGENTE = Read = id 2 (según tu script SQL)
-            // -------------------------------------------------
-            $sql = "
-                INSERT INTO usuarios (username, password, roles_id)
-                VALUES (?, '123', 2)
-            ";
+            // ---------------------------------------------
+            // Verificar username NO repetido
+            // ---------------------------------------------
+            $sql = "SELECT COUNT(*) FROM usuarios WHERE username = ?";
             $stmt = $cnUsuarios->prepare($sql);
             $stmt->execute([$username]);
 
-            $mensaje = "Usuario AGENTE creado correctamente.";
+            if ($stmt->fetchColumn() > 0) {
+                $error = "El username ya existe. No se permiten duplicados.";
+            } else {
+
+                // ---------------------------------------------
+                // Insertar usuario
+                // ---------------------------------------------
+                $sql = "
+                    INSERT INTO usuarios (username, password, roles_id)
+                    VALUES (?, '123', ?)
+                ";
+                $stmt = $cnUsuarios->prepare($sql);
+                $stmt->execute([$username, $rol_id]);
+
+                $mensaje = "Usuario creado correctamente.";
+            }
         }
     }
 }
@@ -63,54 +71,67 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <html lang="es">
 <head>
     <meta charset="utf-8">
-    <title>Crear Usuario - SUPERADM</title>
+    <title>Crear Usuario - SUPERADMIN</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <!-- Bootstrap -->
     <link rel="stylesheet"
           href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
 
-    <!-- Tus estilos -->
-    <link rel="stylesheet" href="../Recursos/css/estilos.css" type="text/css">
+    <!-- Estilos -->
+    <link rel="stylesheet" href="../Recursos/css/estilos.css">
 </head>
 
 <body>
 
 <div class="container" style="margin-top:30px; max-width:600px;">
+
     <div class="panel panel-success">
-        <div class="panel-heading">
+        <div class="panel-heading text-center">
             <h3 class="panel-title">
-                Crear Usuario AGENTE
+                Crear Usuario (SUPERADMIN)
             </h3>
         </div>
 
         <div class="panel-body">
 
-            <?php if ($error !== "") : ?>
-                <div class="alert alert-danger">
+            <?php if ($error): ?>
+                <div class="alert alert-danger text-center">
                     <?= htmlspecialchars($error) ?>
                 </div>
             <?php endif; ?>
 
-            <?php if ($mensaje !== "") : ?>
-                <div class="alert alert-success">
+            <?php if ($mensaje): ?>
+                <div class="alert alert-success text-center">
                     <?= htmlspecialchars($mensaje) ?>
                 </div>
             <?php endif; ?>
 
             <form method="post" action="crear_usuario.php">
 
+                <!-- USERNAME -->
                 <div class="form-group">
-                    <label>Username (Placa del vehículo)</label>
+                    <label>Username</label>
                     <input
                         type="text"
                         name="username"
                         class="form-control"
-                        placeholder="Ej: PCH3465"
+                        placeholder="Ej: PCH3465 o JuanPerez"
                         required
                     >
                 </div>
 
+                <!-- ROL -->
+                <div class="form-group">
+                    <label>Rol</label>
+                    <select name="rol_id" class="form-control" required>
+                        <option value="">-- Seleccione un rol --</option>
+                        <option value="2">AGENTE</option>
+                        <option value="5">ADMINISTRADOR</option>
+                    </select>
+                </div>
+
+                <!-- PASSWORD -->
                 <div class="form-group">
                     <label>Password</label>
                     <input
@@ -120,16 +141,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         disabled
                     >
                     <small class="text-muted">
-                        El password por defecto es 123 para todos los usuarios.
+                        La contraseña por defecto es <b>123</b> para todos los usuarios.
                     </small>
                 </div>
 
+                <!-- BOTONES -->
                 <button type="submit" class="btn btn-success btn-block">
                     <span class="glyphicon glyphicon-plus"></span>
                     Crear Usuario
                 </button>
 
-                <a href="../index.php" class="btn btn-default btn-block" style="margin-top:10px;">
+                <a href="../index.php"
+                   class="btn btn-default btn-block"
+                   style="margin-top:10px;">
                     Volver al Inicio
                 </a>
 
@@ -137,6 +161,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         </div>
     </div>
+
 </div>
 
 </body>
