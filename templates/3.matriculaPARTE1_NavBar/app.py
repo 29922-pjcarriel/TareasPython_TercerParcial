@@ -1,9 +1,9 @@
 # app.py
 from flask import Flask, request
-import constantes
+import constantes3
 
-from clases.vehiculo import Vehiculo
-from clases.matricula import Matricula
+from clases3.vehiculo import Vehiculo
+from clases3.matricula import Matricula
 
 app = Flask(__name__)
 
@@ -19,20 +19,20 @@ def conectar():
     try:
         import mysql.connector  # type: ignore
         cn = mysql.connector.connect(
-            host=constantes.DB_HOST,
-            user=constantes.DB_USER,
-            password=constantes.DB_PASS,
-            database=constantes.DB_NAME,
+            host=constantes3.DB_HOST,
+            user=constantes3.DB_USER,
+            password=constantes3.DB_PASS,
+            database=constantes3.DB_NAME,
             charset="utf8"
         )
         return cn
     except Exception:
         import pymysql  # type: ignore
         cn = pymysql.connect(
-            host=constantes.DB_HOST,
-            user=constantes.DB_USER,
-            password=constantes.DB_PASS,
-            database=constantes.DB_NAME,
+            host=constantes3.DB_HOST,
+            user=constantes3.DB_USER,
+            password=constantes3.DB_PASS,
+            database=constantes3.DB_NAME,
             charset="utf8",
             cursorclass=pymysql.cursors.DictCursor
         )
