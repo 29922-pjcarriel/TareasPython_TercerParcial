@@ -1,0 +1,279 @@
+body {
+  width:1300px;
+  margin: 0 auto;  /* Para que el contenedor este centrado */
+  text-align:center;
+}
+
+h2{
+  text-align: center;
+  margin-bottom: 10px;
+  color:#FFF;
+  font-family:Verdana, Geneva, sans-serif;
+  font-size: 30px;
+}
+
+.Texto{
+  text-align: center;
+  color:#000;
+  font-family:Arial;
+  font-size: 25px;
+}
+
+.Boton {
+  background-color: #ffffff;
+  border-width:5px;
+  border-style:solid;
+  border-color:rgba(121, 121, 121, 1);
+  border-radius:10px;
+  color: black;
+  padding: 15px 32px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  margin: 4px 2px;
+  cursor: pointer;
+}
+
+/* HEADER   */
+#header {
+  position:absolute;
+  left:50px;
+  top:20px;
+  width: 1260px;
+  height:170px;
+  float: none;
+  background:inherit;
+  background-color: rgba(0, 255, 255);
+  box-sizing:border-box;
+  border-width:5px;
+  border-style:solid;
+  border-color:rgba(121, 121, 121, 1);
+  border-radius:10px;
+}
+
+/* navBar  */
+#navBar {
+  position:absolute;
+  left:50px;
+  top:200px;
+  width:1260px;
+  height:70px;
+  float: none;
+  background:inherit;
+  background-color: rgba(255,255,0);
+  box-sizing:border-box;
+  border-width:5px;
+  border-style:solid;
+  border-color:rgba(121, 121, 121, 1);
+  border-radius:10px;
+  padding-top: 10px;
+}
+
+#navBar a{
+  text-decoration: none;
+  color: rgb(13, 13, 27);
+}
+#navBar a:hover{
+  text-decoration: none;
+}
+
+/* leftMenu  */
+#leftMenu {
+  position:absolute;
+  left:50px;
+  top:280px;
+  width:200px;
+  height:320px;
+  float: left;
+  background:inherit;
+  background-color: rgba(255, 255, 255);
+  box-sizing:border-box;
+  border-width:5px;
+  border-style:solid;
+  border-color:rgba(121, 121, 121, 1);
+  border-radius:10px;
+  padding-top: 30px;
+}
+
+/* content */
+#content {
+  position:absolute;
+  left:270px;
+  top:280px;
+  width:600px;
+  height:320px;
+  float: left;
+  background:inherit;
+  background-color: rgba(51, 153, 51);
+  box-sizing:border-box;
+  border-width:5px;
+  border-style:solid;
+  border-color:rgba(121, 121, 121, 1);
+  border-radius:10px;
+}
+
+/* rigthMenu */
+#rightMenu {
+  position:absolute;
+  left:890px;
+  top:280px;
+  width:420px;
+  height:320px;
+  float: left;
+  background:inherit;
+  background-color: rgba(0, 0, 0);
+  box-sizing:border-box;
+  border-width:5px;
+  border-style:solid;
+  border-color:rgba(121, 121, 121, 1);
+  border-radius:10px;
+  padding-left: 10px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  padding-right: 10px;
+}
+
+/* footer  */
+#footer {
+  position:absolute;
+  left:50px;
+  top:620px;
+  width:1260px;
+  height:60px;
+  float: none;
+  background:inherit;
+  background-color: rgba(255,255,0);
+  box-sizing:border-box;
+  border-width:5px;
+  border-style:solid;
+  border-color:rgba(121, 121, 121, 1);
+  border-radius:10px;
+  padding-top: 10px;
+}
+
+/* =========================================================
+   ====== ESTILO TABLAS CRUD + BOTONES (BONITO) ======
+   ========================================================= */
+
+/* tablas */
+#content table{
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border: 2px solid #666;
+}
+
+#content th{
+  background: #e6e6e6;
+  color: #000;
+  padding: 10px;
+  text-align: center;
+  font-weight: bold;
+}
+
+#content td{
+  padding: 10px;
+  text-align: center;
+  border: 1px solid #bbb;
+}
+
+/* filas alternadas */
+#content tr:nth-child(even) td{ background: #f7f7f7; }
+#content tr:nth-child(odd) td{ background: #ffffff; }
+
+/* botones por color */
+#content a.Boton{
+  display: inline-block;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 2px solid #555;
+  text-decoration: none;
+  font-weight: bold;
+  background: #ddd;
+  color: #000;
+}
+
+/* NUEVO */
+#content a.Boton[href*="new"]{
+  background: #28a745;
+  color: white;
+  border-color: #1e7e34;
+}
+
+/* BORRAR */
+#content a.Boton[href*="del"]{
+  background: #dc3545;
+  color: white;
+  border-color: #b02a37;
+}
+
+/* ACTUALIZAR */
+#content a.Boton[href*="act"]{
+  background: #ffc107;
+  color: black;
+  border-color: #d39e00;
+}
+
+/* DETALLE */
+#content a.Boton[href*="det"]{
+  background: #0d6efd;
+  color: white;
+  border-color: #084298;
+}
+
+/* =========================================================
+   ====== MODO CRUD (EVITA SOLAPE) ======
+   En CRUD: se oculta left/right, content baja normal y footer no tapa
+   ========================================================= */
+
+.modo-crud #leftMenu,
+.modo-crud #rightMenu{
+  display: none;
+}
+
+/* En CRUD el content ya NO debe ser absolute (si no, no crece) */
+.modo-crud #content{
+  position: relative !important;
+  left: 50px !important;
+  top: 290px !important;      /* arranca bajo navbar */
+  width: 1260px !important;   /* ocupa casi todo */
+  height: auto !important;    /* crece según tabla */
+  min-height: 420px;
+  padding: 20px;
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+/* Footer en CRUD: debajo del contenido */
+.modo-crud #footer{
+  position: relative !important;
+  left: 50px !important;
+  top: 310px !important;      /* se coloca debajo del content */
+  margin-top: 20px;
+}
+
+/* ===== En CRUD: ocultar el "cuadro verde" del content ===== */
+.modo-crud #content{
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+}
+
+.modo-crud #content{
+  margin-top: 30px;
+}
+
+.modo-crud #content table{
+  width: 100%;
+  background: white;
+  border: 2px solid #666;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.modo-crud #footer{
+  display: none;
+}
+
