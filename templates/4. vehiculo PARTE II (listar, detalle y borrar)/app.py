@@ -6,7 +6,7 @@ import mysql.connector
 from flask import Flask, request
 
 from constantes4 import SERVER, USER, PASS, BD, PORT
-from clases.vehiculo import Vehiculo
+from clases4.vehiculo import Vehiculo
 
 app = Flask(__name__)
 

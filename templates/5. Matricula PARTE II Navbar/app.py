@@ -2,20 +2,21 @@
 # Matriculas Vehículos - PARTE II (Vehiculo + Matricula)
 
 import base64
+import base64
 import mysql.connector
 from flask import Flask, request
 
 import os, sys
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-RUTA_CLASES = os.path.join(BASE_DIR, "clases")
-if RUTA_CLASES not in sys.path:
-    sys.path.insert(0, RUTA_CLASES)
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
 
 from constantes5 import SERVER, USER, PASS, BD, PORT
-from clases.vehiculo import Vehiculo
-from clases.matricula import Matricula
+from clases5.vehiculo import Vehiculo
+from clases5.matricula import Matricula
 
 app = Flask(__name__)
+
 
 
 #*******************************************************
