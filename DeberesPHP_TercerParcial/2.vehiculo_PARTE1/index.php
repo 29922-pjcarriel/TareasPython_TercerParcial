@@ -31,6 +31,11 @@
                 $objetoVehiculo = new vehiculo($db);
 
                 if(isset($_GET['d'])){
+
+                    echo "<pre>";
+                        print_r($_GET);
+                    echo "</pre>";
+	 
                     $tmp = explode("/", $_GET['d']);
                     $op = $tmp[0];
                     $id = $tmp[1];
@@ -48,6 +53,9 @@
                     }
                 } else {
                     // LISTADO ORIGINAL
+                    echo "<pre>";
+                        print_r($_POST);
+                    echo "</pre>";
                     echo "<div class='table-responsive'>";
                     echo $objetoVehiculo->get_list();
                     echo "</div>";
