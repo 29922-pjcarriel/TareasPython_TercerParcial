@@ -4,7 +4,7 @@ import os
 import importlib.util
 import sys
 from flask import Flask, render_template, send_from_directory, request
-from flask import send_from_directory
+
 
 # =========================
 # CONFIGURACIÓN BASE
@@ -54,7 +54,7 @@ def ejecutar_flask_hijo(ruta_archivo, metodo='GET', datos=None):
 
     try:
         # 1) Cargar módulo (app.py del hijo)
-        nombre_modulo = f"{nombre_carpeta_hijo}_{nombre_archivo_py}".replace(".py", "")
+        nombre_modulo = f"m_{nombre_carpeta_hijo}_{nombre_archivo_py}".replace(".", "_")
         spec = importlib.util.spec_from_file_location(nombre_modulo, ruta_archivo)
         modulo = importlib.util.module_from_spec(spec)
 
@@ -115,7 +115,7 @@ def ejecutar_flask_hijo(ruta_archivo, metodo='GET', datos=None):
             return respuesta.data, respuesta.status_code
 
     except Exception as e:
-        return f"<h1>Error al ejecutar el script</h1><pre>{e}</pre>".encode("utf-8"), 500
+        import traceback; return f"<h1>Error al ejecutar el script</h1><pre>{traceback.format_exc()}</pre>".encode("utf-8"), 500
 
     finally:
         if ruta_proyecto_hijo in sys.path:

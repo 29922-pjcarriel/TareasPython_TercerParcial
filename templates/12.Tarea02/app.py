@@ -9,7 +9,7 @@ import mysql.connector
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from db import get_db_usuarios, get_db_matriculacion
-from flask import Flask, request, make_response
+from flask import Flask, request, make_response, send_from_directory
 from markupsafe import escape
 
 app = Flask(__name__)
@@ -55,11 +55,21 @@ class SesionPersistente(dict):
 
 SESION = SesionPersistente()
 
-PREFIX = "/Tarea02/app.py"
+
+# PREFIX Dinámico basado en el nombre de la carpeta (ej: /12.Tarea02/app.py)
+CARPETA = os.path.basename(os.path.dirname(os.path.abspath(__file__)))
+PREFIX = f"/{CARPETA}/app.py"
 
 def u(path=""):
     if path and not path.startswith("/"): path = "/" + path
     return PREFIX + path
+
+# SERVIR IMAGENES STATIC (Maneja fallback si el lanzador no sirve la ruta)
+@app.route('/static_img/<path:filename>')
+def static_img(filename):
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    return send_from_directory(os.path.join(base_dir, 'static', 'img'), filename)
+
 
 def redir(path):
     full = u(path)
@@ -127,7 +137,7 @@ def page(titulo, body, show_nav=True, extra_js=""):
 <div class="collapse navbar-collapse" id="mn"><ul class="nav navbar-nav">{items}</ul><ul class="nav navbar-nav navbar-right">{right}</ul></div></div></nav>'''
     
     header_img = f'''<div class="container-fluid"><div class="row"><header class="col-xs-12 text-center">
-<img src="/Tarea02/static/img/logo_ESPE.png" class="img-responsive center-block" style="max-height:100px" alt="ESPE">
+<img src="{u('/static_img/logo_ESPE.png')}" class="img-responsive center-block" style="max-height:100px" alt="ESPE">
 </header></div></div>'''
 
     return f'''<!doctype html><html lang="es"><head><meta charset="utf-8"><title>{escape(titulo)}</title>
@@ -210,9 +220,13 @@ def vehiculos():
     for v in vs:
         av = f"$ {float(v['avaluo']):,.2f}"
         if rr == "AGENTE":
-            act = f'<a href="{u(f"/consultar_matricula?id={v["id"]}")}" class="btn btn-xs btn-info">Consultar</a> <a href="{u(f"/matricular?id={v["id"]}")}" class="btn btn-xs btn-success">Matricular</a>'
+            u_con = u(f"/consultar_matricula?id={v['id']}")
+            u_mat = u(f"/matricular?id={v['id']}")
+            act = f'<a href="{u_con}" class="btn btn-xs btn-info">Consultar</a> <a href="{u_mat}" class="btn btn-xs btn-success">Matricular</a>'
         else:
-            act = f'<a href="{u(f"/vehiculo_form?id={v["id"]}")}" class="btn btn-xs btn-primary">Editar</a> <a href="{u(f"/vehiculo_delete?id={v["id"]}")}" class="btn btn-xs btn-danger" onclick="return confirm(\'¿Eliminar?\')">Eliminar</a>'
+            u_ed = u(f"/vehiculo_form?id={v['id']}")
+            u_del = u(f"/vehiculo_delete?id={v['id']}")
+            act = f'<a href="{u_ed}" class="btn btn-xs btn-primary">Editar</a> <a href="{u_del}" class="btn btn-xs btn-danger" onclick="return confirm(\'¿Eliminar?\')">Eliminar</a>'
         rows += f'<tr><td>{v["id"]}</td><td>{escape(v["placa"])}</td><td>{escape(v["marca"])}</td><td>{escape(v["motor"])}</td><td>{escape(v["chasis"])}</td><td>{escape(v["combustible"])}</td><td>{v["anio"]}</td><td>{escape(v["color"])}</td><td>{av}</td><td>{act}</td></tr>'
     rd = "ADMINISTRADOR" if rr=="ADM" else "AGENTE"
     body = f'''<div class="container-fluid" style="margin-top:20px"><h2>Listado de Vehículos</h2>
@@ -367,7 +381,9 @@ def marcas():
     vd=escape(me['descripcion']) if me else ""; vp=escape(me['pais']) if me else ""; vdi=escape(me['direccion']) if me else ""; vid=me['id'] if me else ""
     rows=""
     for m in ml:
-        rows+=f'<tr><td>{m["id"]}</td><td>{escape(m["descripcion"])}</td><td>{escape(m["pais"])}</td><td>{escape(m["direccion"])}</td><td><a href="{u(f"/marcas?accion=editar&id={m["id"]}")}" class="btn btn-xs btn-primary">Editar</a> <a href="{u(f"/marcas?accion=eliminar&id={m["id"]}")}" class="btn btn-xs btn-danger" onclick="return confirm(\'¿Eliminar?\')">Eliminar</a></td></tr>'
+        u_ed = u(f"/marcas?accion=editar&id={m['id']}")
+        u_del = u(f"/marcas?accion=eliminar&id={m['id']}")
+        rows+=f'<tr><td>{m["id"]}</td><td>{escape(m["descripcion"])}</td><td>{escape(m["pais"])}</td><td>{escape(m["direccion"])}</td><td><a href="{u_ed}" class="btn btn-xs btn-primary">Editar</a> <a href="{u_del}" class="btn btn-xs btn-danger" onclick="return confirm(\'¿Eliminar?\')">Eliminar</a></td></tr>'
     body=f'''<div class="container" style="margin-top:30px;max-width:900px"><h2>Gestión de Marcas</h2>
 <p>Usuario: <strong>{escape(SESION.get("username",""))}</strong> | Rol: <strong>ADM</strong></p><hr>{mh}
 <div class="panel panel-success"><div class="panel-heading"><strong>{tf}</strong></div><div class="panel-body">
@@ -416,7 +432,9 @@ def agencias():
     vt=escape(str(a.get('telefono',''))); vhi=str(a.get('horainicio','')); vhf=str(a.get('horafin',''))
     rows=""
     for ag in al:
-        rows+=f'<tr><td>{ag["id"]}</td><td>{escape(ag["descripcion"])}</td><td>{escape(ag["direccion"])}</td><td>{escape(ag["telefono"])}</td><td>{ag["horainicio"]} - {ag["horafin"]}</td><td><a href="{u(f"/agencias?accion=editar&id={ag["id"]}")}" class="btn btn-xs btn-primary">Editar</a> <a href="{u(f"/agencias?accion=eliminar&id={ag["id"]}")}" class="btn btn-xs btn-danger" onclick="return confirm(\'¿Eliminar?\')">Eliminar</a></td></tr>'
+        u_ed = u(f"/agencias?accion=editar&id={ag['id']}")
+        u_del = u(f"/agencias?accion=eliminar&id={ag['id']}")
+        rows+=f'<tr><td>{ag["id"]}</td><td>{escape(ag["descripcion"])}</td><td>{escape(ag["direccion"])}</td><td>{escape(ag["telefono"])}</td><td>{ag["horainicio"]} - {ag["horafin"]}</td><td><a href="{u_ed}" class="btn btn-xs btn-primary">Editar</a> <a href="{u_del}" class="btn btn-xs btn-danger" onclick="return confirm(\'¿Eliminar?\')">Eliminar</a></td></tr>'
     body=f'''<div class="container" style="margin-top:30px;max-width:950px"><h2>Gestión de Agencias</h2>
 <p>Usuario: <strong>{escape(SESION.get("username",""))}</strong> | Rol: <strong>ADM</strong></p><hr>{mh}
 <div class="panel panel-success"><div class="panel-heading"><strong>{tf}</strong></div><div class="panel-body">
